@@ -1,8 +1,11 @@
 extern crate serialize;
 use std::io::net::udp::UdpSocket;
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
+use std::io::MemReader;
+use std::io::{IoResult, IoError, IoErrorKind, OtherIoError};
 use std::comm::TryRecvError;
 
+#[deriving(FromPrimitive)]
 enum PacketType {
     PacketConnect = 0,
     PacketDisconnect,
@@ -20,12 +23,27 @@ enum Command {
 }
 
 impl Packet {
-    fn deserialize(raw: &[u8]) -> Packet {
-        Packet {
-            protocol_id: 0,
-            packet_type: PacketMessage,
-            packet_content: vec![]
+    fn deserialize(raw: &[u8]) -> IoResult<Packet> {
+        let mut r = MemReader::new(Vec::from_slice(raw));
+        let protocol_id = try!(r.read_be_u32());
+        let packet_type = try!(r.read_byte());
+        let content = try!(r.read_to_end());
+
+        match FromPrimitive::from_u8(packet_type) {
+            Some(packet_type) => {
+                Ok(Packet {
+                    protocol_id: protocol_id,
+                    packet_type: packet_type,
+                    packet_content: content
+                })
+            },
+            None => Err(IoError{
+                kind: OtherIoError,
+                desc: "Invalid packet type",
+                detail: None
+            })
         }
+
     }
 
     fn serialize(&self) -> Vec<u8> {
@@ -44,7 +62,14 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_
     loop {
         match reader.recv_from(buf) {
             Ok((amt, src)) => {
-                reader_sub_out.send(Packet::deserialize(buf));
+                match Packet::deserialize(buf) {
+                    Ok(packet) => {
+                        //TODO: Validate this packet is actually for us
+                        //Packet type, sender
+                        reader_sub_out.send(packet);
+                    },
+                    Err(_) => ()
+                }
             }
             Err(e) => println!("couldn't receive a datagram: {}", e)
         }
