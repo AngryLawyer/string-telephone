@@ -5,18 +5,20 @@ use std::comm::TryRecvError;
 use packet::{Packet, Command};
 
 
-fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_sub_in: Receiver<Command>) {
+fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_sub_in: Receiver<Command>, target_addr: SocketAddr, protocol_id: u32) {
     let mut buf = [0, ..255];
     loop {
         match reader.recv_from(buf) {
             Ok((amt, src)) => {
-                match Packet::deserialize(buf) {
-                    Ok(packet) => {
-                        //TODO: Validate this packet is actually for us
-                        //Packet type, sender
-                        reader_sub_out.send(packet);
-                    },
-                    Err(_) => ()
+                if src == target_addr {
+                    match Packet::deserialize(buf) {
+                        Ok(packet) => {
+                            if packet.protocol_id == protocol_id {
+                                reader_sub_out.send(packet);
+                            }
+                        },
+                        Err(_) => ()
+                    }
                 }
             }
             Err(e) => println!("couldn't receive a datagram: {}", e)
@@ -30,12 +32,21 @@ fn writer_process(mut writer: UdpSocket, writer_sub_out: Sender<Command>, writer
     }
 }
 
+pub enum ConnectionState {
+    Disconnected,
+    Connecting,
+    Connected
+}
+
 /**
  * Clientside implementation of UDP networking
  */
 struct Client {
     pub addr: SocketAddr,
     pub target_addr: SocketAddr,
+
+    protocol_id: u32,
+    connection_state: 
 
     reader_send: Sender<Command>,
     reader_receive: Receiver<Packet>,
@@ -45,11 +56,10 @@ struct Client {
 
 
 impl Client {
-
     /**
      * Connect our Client to a target Server
      */
-    pub fn connect(addr: SocketAddr, target_addr: SocketAddr) -> IoResult<Client> {
+    pub fn connect(addr: SocketAddr, target_addr: SocketAddr, protocol_id: u32) -> IoResult<Client> {
          match UdpSocket::bind(addr) {
             Ok(reader) => {
                 let writer = reader.clone();
@@ -58,11 +68,12 @@ impl Client {
                 let (reader_sub_out, reader_in) = channel();
 
                 spawn(proc() {
-                    reader_process(reader, reader_sub_out, reader_sub_in);
+                    reader_process(reader, reader_sub_out, reader_sub_in, target_addr, protocol_id);
                 });
 
                 let (writer_out, writer_sub_in) = channel();
                 let (writer_sub_out, writer_in) = channel();
+
                 spawn(proc() {
                     writer_process(writer, writer_sub_out, writer_sub_in, target_addr);
                 });
@@ -73,7 +84,9 @@ impl Client {
                     reader_send: reader_out,
                     reader_receive: reader_in,
                     writer_send: writer_out,
-                    writer_receive: writer_in
+                    writer_receive: writer_in,
+                    protocol_id: protocol_id,
+                    connection_state: Disconnected
                 })
             }
             Err(e) => Err(e)
@@ -89,8 +102,4 @@ impl Client {
             _ => None
         }
     }
-}
-
-fn main () {
-    Client::connect(SocketAddr{ip: Ipv4Addr(127, 0, 0, 1), port: 0}, SocketAddr{ip: Ipv4Addr(127, 0, 0, 1), port: 23232});
 }

@@ -9,9 +9,9 @@ pub enum PacketType {
 }
 
 pub struct Packet {
-    protocol_id: u32,
-    packet_type: PacketType,
-    packet_content: Vec<u8>
+    pub protocol_id: u32,
+    pub packet_type: PacketType,
+    pub packet_content: Vec<u8>
 }
 
 pub enum Command {
