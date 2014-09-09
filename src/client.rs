@@ -1,7 +1,7 @@
 extern crate serialize;
 use std::io::net::udp::UdpSocket;
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
-use std::io::MemReader;
+use std::io::BufReader;
 use std::io::{IoResult, IoError, IoErrorKind, OtherIoError};
 use std::comm::TryRecvError;
 
@@ -24,7 +24,7 @@ enum Command {
 
 impl Packet {
     fn deserialize(raw: &[u8]) -> IoResult<Packet> {
-        let mut r = MemReader::new(Vec::from_slice(raw));
+        let mut r = BufReader::new(raw);
         let protocol_id = try!(r.read_be_u32());
         let packet_type = try!(r.read_byte());
         let content = try!(r.read_to_end());
@@ -49,12 +49,6 @@ impl Packet {
     fn serialize(&self) -> Vec<u8> {
         vec![]
     }
-}
-
-struct Connection {
-    addr: SocketAddr,
-    reader_comms: Option<(Sender<Command>, Receiver<Packet>)>,
-    writer_comms: Option<(Sender<Packet>, Receiver<Command>)>
 }
 
 fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_sub_in: Receiver<Command>) {
@@ -82,15 +76,31 @@ fn writer_process(mut writer: UdpSocket, writer_sub_out: Sender<Command>, writer
     }
 }
 
-impl Connection {
-    pub fn new(addr: SocketAddr) -> Connection {
-        Connection {
+/**
+ * Clientside implementation of UDP networking
+ */
+struct Client {
+    addr: SocketAddr,
+    reader_comms: Option<(Sender<Command>, Receiver<Packet>)>,
+    writer_comms: Option<(Sender<Packet>, Receiver<Command>)>
+}
+
+
+impl Client {
+    /**
+     * Create a new Client handle
+     */
+    pub fn new(addr: SocketAddr) -> Client {
+        Client {
             addr: addr,
             reader_comms: None,
             writer_comms: None
         }
     }
 
+    /**
+     * Connect our Client to a target Server
+     */
     pub fn connect(&mut self, target_addr: SocketAddr) {
          match UdpSocket::bind(self.addr) {
             Ok(reader) => {
@@ -116,6 +126,9 @@ impl Connection {
         };
     }
 
+    /**
+     * Pop the last event off of our comms queue, if any
+     */
     pub fn poll(&mut self) -> Option<Packet> {
         match self.reader_comms {
             Some((_, ref mut reader_in)) => {
@@ -130,5 +143,5 @@ impl Connection {
 }
 
 fn main () {
-    Connection::new(SocketAddr{ip: Ipv4Addr(127, 0, 0, 1), port: 0});
+    Client::new(SocketAddr{ip: Ipv4Addr(127, 0, 0, 1), port: 0});
 }

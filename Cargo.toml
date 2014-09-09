@@ -1,0 +1,15 @@
+[package]
+
+name = "string_telephone"
+version = "0.0.1"
+authors = ["Tony Aldridge <tony@angry-lawyer.com>"]
+
+[lib]
+
+name = "string_telephone"
+path = "src/lib.rs"
+
+[[bin]]
+
+name = "demo"
+path = "src/demo.rs"
