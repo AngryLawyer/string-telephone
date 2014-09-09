@@ -1,55 +1,9 @@
-extern crate serialize;
 use std::io::net::udp::UdpSocket;
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
-use std::io::BufReader;
 use std::io::{IoResult, IoError, IoErrorKind, OtherIoError};
 use std::comm::TryRecvError;
+use packet::{Packet, Command};
 
-#[deriving(FromPrimitive)]
-enum PacketType {
-    PacketConnect = 0,
-    PacketDisconnect,
-    PacketMessage
-}
-
-struct Packet {
-    protocol_id: u32,
-    packet_type: PacketType,
-    packet_content: Vec<u8>
-}
-
-enum Command {
-    Disconnect
-}
-
-impl Packet {
-    fn deserialize(raw: &[u8]) -> IoResult<Packet> {
-        let mut r = BufReader::new(raw);
-        let protocol_id = try!(r.read_be_u32());
-        let packet_type = try!(r.read_byte());
-        let content = try!(r.read_to_end());
-
-        match FromPrimitive::from_u8(packet_type) {
-            Some(packet_type) => {
-                Ok(Packet {
-                    protocol_id: protocol_id,
-                    packet_type: packet_type,
-                    packet_content: content
-                })
-            },
-            None => Err(IoError{
-                kind: OtherIoError,
-                desc: "Invalid packet type",
-                detail: None
-            })
-        }
-
-    }
-
-    fn serialize(&self) -> Vec<u8> {
-        vec![]
-    }
-}
 
 fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_sub_in: Receiver<Command>) {
     let mut buf = [0, ..255];
@@ -80,29 +34,23 @@ fn writer_process(mut writer: UdpSocket, writer_sub_out: Sender<Command>, writer
  * Clientside implementation of UDP networking
  */
 struct Client {
-    addr: SocketAddr,
-    reader_comms: Option<(Sender<Command>, Receiver<Packet>)>,
-    writer_comms: Option<(Sender<Packet>, Receiver<Command>)>
+    pub addr: SocketAddr,
+    pub target_addr: SocketAddr,
+
+    reader_send: Sender<Command>,
+    reader_receive: Receiver<Packet>,
+    writer_send: Sender<Packet>,
+    writer_receive: Receiver<Command>
 }
 
 
 impl Client {
-    /**
-     * Create a new Client handle
-     */
-    pub fn new(addr: SocketAddr) -> Client {
-        Client {
-            addr: addr,
-            reader_comms: None,
-            writer_comms: None
-        }
-    }
 
     /**
      * Connect our Client to a target Server
      */
-    pub fn connect(&mut self, target_addr: SocketAddr) {
-         match UdpSocket::bind(self.addr) {
+    pub fn connect(addr: SocketAddr, target_addr: SocketAddr) -> IoResult<Client> {
+         match UdpSocket::bind(addr) {
             Ok(reader) => {
                 let writer = reader.clone();
 
@@ -119,29 +67,30 @@ impl Client {
                     writer_process(writer, writer_sub_out, writer_sub_in, target_addr);
                 });
 
-                self.reader_comms = Some((reader_out, reader_in));
-                self.writer_comms = Some((writer_out, writer_in));
+                Ok(Client {
+                    addr: addr,
+                    target_addr: target_addr,
+                    reader_send: reader_out,
+                    reader_receive: reader_in,
+                    writer_send: writer_out,
+                    writer_receive: writer_in
+                })
             }
-            Err(e) => fail!("couldn't bind socket: {}", e)
-        };
+            Err(e) => Err(e)
+        }
     }
 
     /**
      * Pop the last event off of our comms queue, if any
      */
     pub fn poll(&mut self) -> Option<Packet> {
-        match self.reader_comms {
-            Some((_, ref mut reader_in)) => {
-                match reader_in.try_recv() {
-                    Ok(value) => Some(value),
-                    _ => None
-                }
-            },
-            None => None
+        match self.reader_receive.try_recv() {
+            Ok(value) => Some(value),
+            _ => None
         }
     }
 }
 
 fn main () {
-    Client::new(SocketAddr{ip: Ipv4Addr(127, 0, 0, 1), port: 0});
+    Client::connect(SocketAddr{ip: Ipv4Addr(127, 0, 0, 1), port: 0}, SocketAddr{ip: Ipv4Addr(127, 0, 0, 1), port: 23232});
 }
