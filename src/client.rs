@@ -29,7 +29,7 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_
                         Err(_) => ()
                     }
                 }
-            }
+            },
             Err(e) => {
                 match e.kind {
                     TimedOut => {
@@ -54,9 +54,14 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_
 
 fn writer_process(mut writer: UdpSocket, writer_sub_out: Sender<Command>, writer_sub_in: Receiver<Packet>, target_addr: SocketAddr) {
     for msg in writer_sub_in.iter() {
-        match writer.send_to(msg.serialize().as_slice(), target_addr) {
-            Ok(()) => (),
-            Err(e) => println!("Error sending data - {}", e)
+        match msg.serialize() {
+            Ok(msg) => {
+                match writer.send_to(msg.as_slice(), target_addr) {
+                    Ok(()) => (),
+                    Err(e) => println!("Error sending data - {}", e)
+                }
+            },
+            Err(_) => ()
         }
     }
 }

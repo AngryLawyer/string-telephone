@@ -44,11 +44,11 @@ impl Packet {
 
     }
 
-    pub fn serialize(&self) -> Vec<u8> {
+    pub fn serialize(&self) -> IoResult<Vec<u8>> {
         let mut w = MemWriter::new();
-        w.write_be_u32(self.protocol_id);
-        w.write_u8(self.packet_type as u8);
-        w.write(self.packet_content.as_slice());
-        w.unwrap()
+        try!(w.write_be_u32(self.protocol_id));
+        try!(w.write_u8(self.packet_type as u8));
+        try!(w.write(self.packet_content.as_slice()));
+        Ok(w.unwrap())
     }
 }
