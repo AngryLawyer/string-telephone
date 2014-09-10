@@ -98,6 +98,7 @@ impl Client {
                         Ok(client)
                     },
                     _ => {
+                        //TODO: Send shutdown broadcast
                         Err(IoError{
                             kind: OtherIoError,
                             desc: "Failed to connect",
