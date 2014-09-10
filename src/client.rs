@@ -5,7 +5,7 @@ use std::io::Timer;
 use std::comm::TryRecvError;
 use std::time::duration::Duration;
 use std::comm::Select;
-use packet::{Packet, Command, PacketConnect, PacketAccept, PacketReject};
+use packet::{Packet, Command, PacketConnect, PacketAccept, PacketReject, Exit};
 
 
 fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_sub_in: Receiver<Command>, target_addr: SocketAddr, protocol_id: u32) {
@@ -98,7 +98,6 @@ impl Client {
                         Ok(client)
                     },
                     _ => {
-                        //TODO: Send shutdown broadcast
                         Err(IoError{
                             kind: OtherIoError,
                             desc: "Failed to connect",
@@ -172,5 +171,13 @@ impl Client {
             Ok(value) => Some(value),
             _ => None
         }
+    }
+}
+
+impl Drop for Client {
+
+    fn drop(&mut self) {
+        self.reader_send.send(Exit);
+        self.writer_send.send(Exit);
     }
 }
