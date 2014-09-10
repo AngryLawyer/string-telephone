@@ -5,11 +5,12 @@ use std::io::Timer;
 use std::comm::TryRecvError;
 use std::time::duration::Duration;
 use std::comm::Select;
-use packet::{Packet, Command, PacketConnect, PacketAccept, PacketReject, Exit};
+use packet::{Packet, PacketConnect, PacketAccept, PacketReject, Command};
 
 
 fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_sub_in: Receiver<Command>, target_addr: SocketAddr, protocol_id: u32) {
     let mut buf = [0, ..255];
+    reader.set_timeout(Some(1000));
     loop {
         match reader.recv_from(buf) {
             Ok((amt, src)) => {
@@ -24,7 +25,19 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_
                     }
                 }
             }
-            Err(e) => println!("couldn't receive a datagram: {}", e)
+            Err(e) => {
+                match e.kind {
+                    TimedOut => {
+                        match reader_sub_in.try_recv() {
+                            Ok(_) => {
+                            },
+                            Err(Disconnected) => {
+                                //break;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -36,9 +49,9 @@ fn writer_process(mut writer: UdpSocket, writer_sub_out: Sender<Command>, writer
 }
 
 pub enum ConnectionState {
-    Disconnected,
-    Connecting,
-    Connected
+    CommsDisconnected,
+    CommsConnecting,
+    CommsConnected
 }
 
 /**
@@ -89,16 +102,16 @@ impl Client {
                     writer_send: writer_out,
                     writer_receive: writer_in,
                     protocol_id: protocol_id,
-                    connection_state: Disconnected
+                    connection_state: CommsDisconnected
                 };
 
                 client.connection_dance();
                 match client.connection_state {
-                    Connected => {
+                    CommsConnected => {
                         Ok(client)
                     },
                     _ => {
-                        Err(IoError{
+                        Err(IoError {
                             kind: OtherIoError,
                             desc: "Failed to connect",
                             detail: None
@@ -114,11 +127,11 @@ impl Client {
      * A blocking connection request
      */
     fn connection_dance(&mut self) {
-        self.connection_state = Connecting;
+        self.connection_state = CommsConnecting;
         let mut timer = Timer::new().unwrap();
         let mut attempts = 0u;
 
-        while attempts < 5 && match self.connection_state { Connecting => true, _ => false } {
+        while attempts < 3 && match self.connection_state { CommsConnecting => true, _ => false } {
 
             self.writer_send.send(Packet {
                 protocol_id: self.protocol_id,
@@ -138,10 +151,10 @@ impl Client {
                 {
                     match packet.packet_type {
                         PacketAccept => {
-                            self.connection_state = Connected;
+                            self.connection_state = CommsConnected;
                         }
                         PacketReject => {
-                            self.connection_state = Disconnected;
+                            self.connection_state = CommsDisconnected;
                         }
                         _ => (),
                     }
@@ -156,8 +169,8 @@ impl Client {
 
         //We didn't manage to connect
         match self.connection_state {
-            Connecting => {
-                self.connection_state = Disconnected
+            CommsConnecting => {
+                self.connection_state = CommsDisconnected
             },
             _ => ()
         }
@@ -171,13 +184,5 @@ impl Client {
             Ok(value) => Some(value),
             _ => None
         }
-    }
-}
-
-impl Drop for Client {
-
-    fn drop(&mut self) {
-        self.reader_send.send(Exit);
-        self.writer_send.send(Exit);
     }
 }

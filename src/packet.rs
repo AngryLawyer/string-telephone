@@ -18,7 +18,6 @@ pub struct Packet {
 
 pub enum Command {
     Disconnect,
-    Exit
 }
 
 impl Packet {
