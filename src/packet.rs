@@ -1,9 +1,11 @@
-use std::io::{IoResult, IoError, IoErrorKind, OtherIoError};
+use std::io::{IoResult, IoError, OtherIoError};
 use std::io::BufReader;
 
 #[deriving(FromPrimitive)]
 pub enum PacketType {
     PacketConnect = 0,
+    PacketAccept,
+    PacketReject,
     PacketDisconnect,
     PacketMessage
 }
@@ -33,7 +35,7 @@ impl Packet {
                     packet_content: content
                 })
             },
-            None => Err(IoError{
+            None => Err(IoError {
                 kind: OtherIoError,
                 desc: "Invalid packet type",
                 detail: None
