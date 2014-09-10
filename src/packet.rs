@@ -1,5 +1,5 @@
 use std::io::{IoResult, IoError, OtherIoError};
-use std::io::BufReader;
+use std::io::{BufReader, MemWriter};
 
 #[deriving(FromPrimitive)]
 pub enum PacketType {
@@ -45,6 +45,10 @@ impl Packet {
     }
 
     pub fn serialize(&self) -> Vec<u8> {
-        vec![]
+        let mut w = MemWriter::new();
+        w.write_be_u32(self.protocol_id);
+        w.write_u8(self.packet_type as u8);
+        w.write(self.packet_content.as_slice());
+        w.unwrap()
     }
 }

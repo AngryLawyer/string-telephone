@@ -7,6 +7,12 @@ use std::time::duration::Duration;
 use packet::{Packet, PacketConnect, PacketAccept, PacketReject, Command, Disconnect};
 
 
+pub enum ConnectionState {
+    CommsDisconnected,
+    CommsConnecting,
+    CommsConnected
+}
+
 fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_sub_in: Receiver<Command>, target_addr: SocketAddr, protocol_id: u32) {
     let mut buf = [0, ..255];
     reader.set_timeout(Some(1000));
@@ -53,12 +59,6 @@ fn writer_process(mut writer: UdpSocket, writer_sub_out: Sender<Command>, writer
             Err(e) => println!("Error sending data - {}", e)
         }
     }
-}
-
-pub enum ConnectionState {
-    CommsDisconnected,
-    CommsConnecting,
-    CommsConnected
 }
 
 /**
