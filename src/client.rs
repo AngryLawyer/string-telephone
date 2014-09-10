@@ -2,10 +2,10 @@ use std::io::net::udp::UdpSocket;
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::io::{IoResult, IoError, IoErrorKind, OtherIoError};
 use std::io::Timer;
-use std::comm::TryRecvError;
+use std::comm::{TryRecvError, Disconnected, Empty};
 use std::time::duration::Duration;
 use std::comm::Select;
-use packet::{Packet, PacketConnect, PacketAccept, PacketReject, Command};
+use packet::{Packet, PacketConnect, PacketAccept, PacketReject, Command, Disconnect};
 
 
 fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_sub_in: Receiver<Command>, target_addr: SocketAddr, protocol_id: u32) {
@@ -29,10 +29,14 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_
                 match e.kind {
                     TimedOut => {
                         match reader_sub_in.try_recv() {
-                            Ok(_) => {
+                            Ok(Disconnect) => {
+                                break;
                             },
                             Err(Disconnected) => {
-                                //break;
+                                break;
+                            },
+                            Err(Empty) => {
+
                             }
                         }
                     }
@@ -184,5 +188,12 @@ impl Client {
             Ok(value) => Some(value),
             _ => None
         }
+    }
+}
+
+impl Drop for Client {
+
+    fn drop(&mut self) {
+        self.reader_send.send(Disconnect);
     }
 }
