@@ -1,10 +1,9 @@
 use std::io::net::udp::UdpSocket;
-use std::io::net::ip::{Ipv4Addr, SocketAddr};
-use std::io::{IoResult, IoError, IoErrorKind, OtherIoError};
+use std::io::net::ip::SocketAddr;
+use std::io::{IoResult, IoError, OtherIoError, TimedOut};
 use std::io::Timer;
-use std::comm::{TryRecvError, Disconnected, Empty};
+use std::comm::{Disconnected, Empty, Select};
 use std::time::duration::Duration;
-use std::comm::Select;
 use packet::{Packet, PacketConnect, PacketAccept, PacketReject, Command, Disconnect};
 
 
@@ -36,10 +35,11 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_
                                 break;
                             },
                             Err(Empty) => {
-
+                                //Keep going
                             }
                         }
-                    }
+                    },
+                    _ => ()
                 }
             }
         }
@@ -48,7 +48,10 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_
 
 fn writer_process(mut writer: UdpSocket, writer_sub_out: Sender<Command>, writer_sub_in: Receiver<Packet>, target_addr: SocketAddr) {
     for msg in writer_sub_in.iter() {
-        writer.send_to(msg.serialize().as_slice(), target_addr);
+        match writer.send_to(msg.serialize().as_slice(), target_addr) {
+            Ok(()) => (),
+            Err(e) => println!("Error sending data - {}", e)
+        }
     }
 }
 
@@ -109,18 +112,14 @@ impl Client {
                     connection_state: CommsDisconnected
                 };
 
-                client.connection_dance();
-                match client.connection_state {
-                    CommsConnected => {
-                        Ok(client)
-                    },
-                    _ => {
-                        Err(IoError {
-                            kind: OtherIoError,
-                            desc: "Failed to connect",
-                            detail: None
-                        })
-                    }
+                if client.connection_dance() {
+                    Ok(client)
+                } else {
+                    Err(IoError {
+                        kind: OtherIoError,
+                        desc: "Failed to connect",
+                        detail: None
+                    })
                 }
             }
             Err(e) => Err(e)
@@ -130,7 +129,7 @@ impl Client {
     /**
      * A blocking connection request
      */
-    fn connection_dance(&mut self) {
+    fn connection_dance(&mut self) -> bool {
         self.connection_state = CommsConnecting;
         let mut timer = Timer::new().unwrap();
         let mut attempts = 0u;
@@ -144,6 +143,7 @@ impl Client {
             });
 
             let timeout = timer.oneshot(Duration::seconds(5));
+
             //FIXME: Replace with the select! macro when it starts working
             let sel = Select::new();
             let mut reader = sel.handle(&self.reader_receive);
@@ -174,9 +174,13 @@ impl Client {
         //We didn't manage to connect
         match self.connection_state {
             CommsConnecting => {
-                self.connection_state = CommsDisconnected
+                self.connection_state = CommsDisconnected;
+                false
             },
-            _ => ()
+            CommsDisconnected => false,
+            CommsConnected => {
+                true
+            }
         }
     }
 
