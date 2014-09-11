@@ -6,18 +6,19 @@
  * Has a read method, to pump items out of the receive buffer
  * Has a read iterator?
  */
+use packet::{Packet, Command};
 
-struct ServerManager<T> {
-    receiver: (Sender<T>, Receiver<T>)
+struct ServerManager {
+    pub addr: SocketAddr,
+
+    protocol_id: u32,
+    reader_send: Sender<Command>,
+    reader_receive: Receiver<Packet>,
 }
 
-impl<T> ServerManager<T> {
-    pub fn new() -> ServerManager<T> {
-        ServerManager {
-            receiver: channel()
-        }
+impl ServerManager {
+    pub fn new(protocol_id: u32) -> ServerManager {
+        
+        ServerManager {protocol_id: protocol_id}
     }
-}
-
-fn main () {
 }
