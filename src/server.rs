@@ -1,11 +1,23 @@
 use std::io::net::udp::UdpSocket;
-use std::io::net::ip::SocketAddr;
+use std::io::net::ip::{SocketAddr, Ipv4Addr, Ipv6Addr};
 use std::io::{IoResult, IoError, OtherIoError, TimedOut};
 use std::io::Timer;
 use std::comm::{Disconnected, Empty, Select};
 use std::time::duration::Duration;
-use packet::{Packet, PacketConnect, PacketAccept, PacketReject, Command, Disconnect};
+use std::collections::TreeMap;
+use packet::{Packet, PacketType, PacketConnect, PacketDisconnect, PacketMessage, PacketAccept, PacketReject, Command, Disconnect};
 
+
+fn hash_sender(address: &SocketAddr) -> String {
+    match address.ip {
+        Ipv4Addr(a, b, c, d) => {
+            format!("{}-{}-{}-{}:{}", a, b, c, d, address.port)
+        },
+        Ipv6Addr(a, b, c, d, e, f, g, h) => {
+            format!("{}-{}-{}-{}-{}-{}-{}-{}:{}", a, b, c, d, e, f, g, h, address.port)
+        }
+    }
+}
 
 /**
  * What we want:
@@ -15,7 +27,6 @@ use packet::{Packet, PacketConnect, PacketAccept, PacketReject, Command, Disconn
  * Has a read method, to pump items out of the receive buffer
  * Has a read iterator?
  */
-
 fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<(Packet, SocketAddr)>, reader_sub_in: Receiver<Command>, protocol_id: u32) {
     let mut buf = [0, ..255];
     reader.set_timeout(Some(1000));
@@ -74,7 +85,9 @@ pub struct ServerManager {
     reader_send: Sender<Command>,
     reader_receive: Receiver<(Packet, SocketAddr)>,
     writer_send: Sender<(Packet, SocketAddr)>,
-    writer_receive: Receiver<Command>
+    writer_receive: Receiver<Command>,
+
+    connections: TreeMap<String, SocketAddr>
 }
 
 impl ServerManager {
@@ -102,7 +115,8 @@ impl ServerManager {
                     reader_send: reader_out,
                     reader_receive: reader_in,
                     writer_send: writer_out,
-                    writer_receive: writer_in
+                    writer_receive: writer_in,
+                    connections: TreeMap::new()
                 })
             }
             Err(e) => Err(e)
@@ -112,9 +126,22 @@ impl ServerManager {
     pub fn poll(&mut self) -> Vec<(Packet, SocketAddr)> {
         loop {
             match self.reader_receive.try_recv() {
-                Ok(tuple) => {
+                Ok((packet, src)) => {
                     //Handle any new connections
-                    println!("Oh my {:?}", tuple)
+                    match packet.packet_type {
+                        PacketConnect => {
+                            self.connections.insert(hash_sender(&src), src);
+                            self.writer_send.send((Packet::accept(self.protocol_id), src));
+                        },
+                        PacketDisconnect => {
+                            self.connections.remove(&hash_sender(&src));
+                        },
+                        PacketMessage => {
+                            println!("Oh my {:?}", (packet, src))
+                        },
+                        _ => ()
+                    }
+                    //Propagate any new messages
                 },
                 _ => {
                     break
@@ -122,7 +149,6 @@ impl ServerManager {
             };
         }
         vec![]
-        //Propagate any new messages
     }
 }
 

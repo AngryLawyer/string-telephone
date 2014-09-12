@@ -141,11 +141,7 @@ impl Client {
 
         while attempts < 3 && match self.connection_state { CommsConnecting => true, _ => false } {
 
-            self.writer_send.send(Packet {
-                protocol_id: self.protocol_id,
-                packet_type: PacketConnect,
-                packet_content: vec![]
-            });
+            self.writer_send.send(Packet::connect(self.protocol_id));
 
             let timeout = timer.oneshot(Duration::seconds(5));
 

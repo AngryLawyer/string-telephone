@@ -21,6 +21,23 @@ pub enum Command {
 }
 
 impl Packet {
+
+    pub fn connect(protocol_id: u32) -> Packet {
+        Packet {
+            protocol_id: protocol_id,
+            packet_type: PacketConnect,
+            packet_content: vec![]
+        }
+    }
+    
+    pub fn accept(protocol_id: u32) -> Packet {
+        Packet {
+            protocol_id: protocol_id,
+            packet_type: PacketAccept,
+            packet_content: vec![]
+        }
+    }
+
     pub fn deserialize(raw: &[u8]) -> IoResult<Packet> {
         let mut r = BufReader::new(raw);
         let protocol_id = try!(r.read_be_u32());
