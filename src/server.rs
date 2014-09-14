@@ -124,6 +124,7 @@ impl ServerManager {
     }
 
     pub fn poll(&mut self) -> Vec<(Packet, SocketAddr)> {
+        let mut out = vec![];
         loop {
             match self.reader_receive.try_recv() {
                 Ok((packet, src)) => {
@@ -132,23 +133,52 @@ impl ServerManager {
                         PacketConnect => {
                             self.connections.insert(hash_sender(&src), src);
                             self.writer_send.send((Packet::accept(self.protocol_id), src));
+                            out.push((packet, src))
                         },
                         PacketDisconnect => {
-                            self.connections.remove(&hash_sender(&src));
+                            let hash = hash_sender(&src);
+                            self.connections.remove(&hash);
+                            if self.connections.contains_key(&hash) {
+                                //Propagate any new messages
+                                out.push((packet, src))
+                            }
                         },
                         PacketMessage => {
-                            println!("Oh my {:?}", (packet, src))
+                            let hash = hash_sender(&src);
+                            if self.connections.contains_key(&hash) {
+                                //Propagate any new messages
+                                out.push((packet, src))
+                            }
                         },
                         _ => ()
-                    }
-                    //Propagate any new messages
+                    };
                 },
                 _ => {
                     break
                 }
             };
+        };
+        out
+    }
+
+    pub fn send_to(&mut self, packet: &Packet, addr: &SocketAddr) {
+        let hashed = hash_sender(addr);
+        match self.connections.find(&hashed) {
+            Some(_) => self.writer_send.send((packet.clone(), addr.clone())),
+            None => (),
         }
-        vec![]
+    }
+
+    pub fn send_to_many(&mut self, packet: &Packet, addrs: &Vec<SocketAddr>) {
+        for addr in addrs.iter() {
+            self.send_to(packet, addr)
+        }
+    }
+
+    pub fn send_to_all(&mut self, packet: &Packet) {
+        for addr in self.connections.clone().values() { //FIXME: Urgh
+            self.send_to(packet, addr)
+        }
     }
 }
 

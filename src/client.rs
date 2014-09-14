@@ -194,6 +194,10 @@ impl Client {
             _ => None
         }
     }
+
+    pub fn send(&mut self, packet: &Packet) {
+        self.writer_send.send(packet.clone());
+    }
 }
 
 impl Drop for Client {

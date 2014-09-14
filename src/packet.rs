@@ -1,7 +1,7 @@
 use std::io::{IoResult, IoError, OtherIoError};
 use std::io::{BufReader, MemWriter};
 
-#[deriving(FromPrimitive)]
+#[deriving(FromPrimitive, Clone)]
 pub enum PacketType {
     PacketConnect = 0,
     PacketAccept,
@@ -10,6 +10,7 @@ pub enum PacketType {
     PacketMessage
 }
 
+#[deriving(Clone)]
 pub struct Packet {
     pub protocol_id: u32,
     pub packet_type: PacketType,
@@ -35,6 +36,14 @@ impl Packet {
             protocol_id: protocol_id,
             packet_type: PacketAccept,
             packet_content: vec![]
+        }
+    }
+
+    pub fn message(protocol_id: u32, message: Vec<u8>) -> Packet {
+        Packet {
+            protocol_id: protocol_id,
+            packet_type: PacketMessage,
+            packet_content: message
         }
     }
 
