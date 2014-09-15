@@ -6,6 +6,7 @@ use std::comm::{Disconnected, Empty, Select};
 use std::time::duration::Duration;
 use std::collections::TreeMap;
 use packet::{Packet, PacketType, PacketConnect, PacketDisconnect, PacketMessage, PacketAccept, PacketReject, Command, Disconnect};
+use time;
 
 
 //FIXME: Ew ew ew
@@ -16,6 +17,21 @@ fn hash_sender(address: &SocketAddr) -> String {
         },
         Ipv6Addr(a, b, c, d, e, f, g, h) => {
             format!("{}-{}-{}-{}-{}-{}-{}-{}:{}", a, b, c, d, e, f, g, h, address.port)
+        }
+    }
+}
+
+#[deriving(Clone)]
+struct ClientInstance {
+    addr: SocketAddr,
+    timeout: i64
+}
+
+impl ClientInstance {
+    pub fn new(addr: SocketAddr, timeout: i64) -> ClientInstance {
+        ClientInstance {
+            addr: addr,
+            timeout: timeout
         }
     }
 }
@@ -86,7 +102,7 @@ pub struct ServerManager {
     writer_send: Sender<(Packet, SocketAddr)>,
     writer_receive: Receiver<Command>,
 
-    connections: TreeMap<String, SocketAddr>
+    connections: TreeMap<String, ClientInstance>
 }
 
 impl ServerManager {
@@ -130,25 +146,29 @@ impl ServerManager {
                     //Handle any new connections
                     match packet.packet_type {
                         PacketConnect => {
-                            self.connections.insert(hash_sender(&src), src);
+                            self.connections.insert(hash_sender(&src), ClientInstance::new(src, time::now().to_timespec().sec + 10)); //FIXME: Shouldn't be done here
                             self.writer_send.send((Packet::accept(self.protocol_id), src));
                             out = Some((packet, src));
                             break
                         },
                         PacketDisconnect => {
                             let hash = hash_sender(&src);
-                            self.connections.remove(&hash);
                             if self.connections.contains_key(&hash) {
                                 out = Some((packet, src));
+                                self.connections.remove(&hash);
                                 break
                             }
                         },
                         PacketMessage => {
                             let hash = hash_sender(&src);
-                            if self.connections.contains_key(&hash) {
-                                //Propagate any new messages
-                                out = Some((packet, src));
-                                break
+                            match self.connections.find_mut(&hash) {
+                                Some(ref mut comms) => {
+                                    out = Some((packet, src));
+                                    //Update our timeout
+                                    comms.timeout = time::now().to_timespec().sec + 10; //FIXME: Stop hardcoding
+                                    break
+                                },
+                                None => ()
                             }
                         },
                         _ => ()
@@ -160,6 +180,16 @@ impl ServerManager {
             };
         };
         out
+    }
+
+    pub fn cull(&mut self) {
+        let mut culled = TreeMap::new();
+
+        for (hash, connection) in self.connections.move_iter() {
+            culled.insert(hash, connection);
+        };
+
+        self.connections = culled;
     }
 
     pub fn send_to(&mut self, packet: &Packet, addr: &SocketAddr) {
@@ -178,7 +208,7 @@ impl ServerManager {
 
     pub fn send_to_all(&mut self, packet: &Packet) {
         for addr in self.connections.clone().values() { //FIXME: Urgh
-            self.send_to(packet, addr)
+            self.send_to(packet, &addr.addr)
         }
     }
 }
