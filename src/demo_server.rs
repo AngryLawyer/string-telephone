@@ -8,14 +8,16 @@ fn main () {
     match server::ServerManager::new(121, SocketAddr {ip: Ipv4Addr(127, 0, 0, 1), port: 6666}) {
         Ok(ref mut server) => {
             loop {
-                let messages = server.poll();
-                for &(ref packet, ref sender) in messages.iter() {
-                    match packet.packet_type {
-                        PacketMessage => {
-                            server.send_to_all(packet);
-                        },
-                        _ => ()
-                    }
+                match server.poll() {
+                    Some((packet, _)) => {
+                        match packet.packet_type {
+                            PacketMessage => {
+                                server.send_to_all(&packet);
+                            },
+                            _ => ()
+                        }
+                    },
+                    None => ()
                 }
             }
         },

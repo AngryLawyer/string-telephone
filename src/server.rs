@@ -123,8 +123,8 @@ impl ServerManager {
         }
     }
 
-    pub fn poll(&mut self) -> Vec<(Packet, SocketAddr)> {
-        let mut out = vec![];
+    pub fn poll(&mut self) -> Option<(Packet, SocketAddr)> {
+        let mut out = None;
         loop {
             match self.reader_receive.try_recv() {
                 Ok((packet, src)) => {
@@ -133,21 +133,23 @@ impl ServerManager {
                         PacketConnect => {
                             self.connections.insert(hash_sender(&src), src);
                             self.writer_send.send((Packet::accept(self.protocol_id), src));
-                            out.push((packet, src))
+                            out = Some((packet, src));
+                            break
                         },
                         PacketDisconnect => {
                             let hash = hash_sender(&src);
                             self.connections.remove(&hash);
                             if self.connections.contains_key(&hash) {
-                                //Propagate any new messages
-                                out.push((packet, src))
+                                out = Some((packet, src));
+                                break
                             }
                         },
                         PacketMessage => {
                             let hash = hash_sender(&src);
                             if self.connections.contains_key(&hash) {
                                 //Propagate any new messages
-                                out.push((packet, src))
+                                out = Some((packet, src));
+                                break
                             }
                         },
                         _ => ()
