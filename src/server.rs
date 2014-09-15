@@ -8,6 +8,7 @@ use std::collections::TreeMap;
 use packet::{Packet, PacketType, PacketConnect, PacketDisconnect, PacketMessage, PacketAccept, PacketReject, Command, Disconnect};
 
 
+//FIXME: Ew ew ew
 fn hash_sender(address: &SocketAddr) -> String {
     match address.ip {
         Ipv4Addr(a, b, c, d) => {
@@ -52,9 +53,7 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<(Packet, SocketA
                             Err(Disconnected) => {
                                 break;
                             },
-                            Err(Empty) => {
-                                //Keep going
-                            }
+                            Err(Empty) => ()
                         }
                     },
                     _ => ()
