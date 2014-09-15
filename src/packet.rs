@@ -30,6 +30,14 @@ impl Packet {
             packet_content: vec![]
         }
     }
+
+    pub fn disconnect(protocol_id: u32) -> Packet {
+        Packet {
+            protocol_id: protocol_id,
+            packet_type: PacketDisconnect,
+            packet_content: vec![]
+        }
+    }
     
     pub fn accept(protocol_id: u32) -> Packet {
         Packet {

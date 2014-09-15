@@ -24,7 +24,7 @@ fn main () {
 
             loop {
                 match connection.poll() {
-                    Some(message) => {
+                    Ok(message) => {
                         match message.packet_type {
                             PacketMessage => {
                                 println!("{}", message.packet_content.into_ascii().into_string())
@@ -32,7 +32,11 @@ fn main () {
                             _ => ()
                         }
                     },
-                    None => ()
+                    Err(client::PollDisconnected) => {
+                        println!("Timed out");
+                        break
+                    },
+                    _ => ()
                 };
                 
                 match recv.try_recv() {

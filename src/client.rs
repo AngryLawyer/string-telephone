@@ -4,7 +4,8 @@ use std::io::{IoResult, IoError, OtherIoError, TimedOut};
 use std::io::Timer;
 use std::comm::{Disconnected, Empty, Select};
 use std::time::duration::Duration;
-use packet::{Packet, PacketConnect, PacketAccept, PacketReject, Command, Disconnect};
+use packet::{Packet, PacketConnect, PacketAccept, PacketReject, PacketDisconnect, Command, Disconnect};
+use time;
 
 
 pub enum ConnectionState {
@@ -13,9 +14,17 @@ pub enum ConnectionState {
     CommsConnected
 }
 
-fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Command>, target_addr: SocketAddr, protocol_id: u32) {
+pub enum PollFailResult {
+    PollEmpty,
+    PollDisconnected
+}
+
+fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Command>, target_addr: SocketAddr, protocol_id: u32, timeout_period: u32) {
     let mut buf = [0, ..255];
     reader.set_timeout(Some(1000));
+
+    let mut expires = time::now().to_timespec().sec + timeout_period as i64;
+
     loop {
         match reader.recv_from(buf) {
             Ok((amt, src)) => {
@@ -24,6 +33,7 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Co
                         Ok(packet) => {
                             if packet.protocol_id == protocol_id {
                                 send.send(packet);
+                                expires = time::now().to_timespec().sec + timeout_period as i64;
                             }
                         },
                         Err(_) => ()
@@ -48,6 +58,9 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Co
                     _ => ()
                 }
             }
+        };
+        if time::now().to_timespec().sec > expires {
+            send.send(Packet::disconnect(protocol_id))
         }
     }
 }
@@ -96,7 +109,7 @@ impl Client {
                 let (reader_task_send, reader_receive) = channel();
 
                 spawn(proc() {
-                    reader_process(reader, reader_task_send, reader_task_receive, target_addr, protocol_id);
+                    reader_process(reader, reader_task_send, reader_task_receive, target_addr, protocol_id, 10);
                 });
 
                 let (writer_send, writer_task_receive) = channel();
@@ -188,10 +201,23 @@ impl Client {
     /**
      * Pop the last event off of our comms queue, if any
      */
-    pub fn poll(&mut self) -> Option<Packet> {
-        match self.reader_receive.try_recv() {
-            Ok(value) => Some(value),
-            _ => None
+    pub fn poll(&mut self) -> Result<Packet, PollFailResult> {
+        match self.connection_state {
+            CommsConnected => {
+                match self.reader_receive.try_recv() {
+                    Ok(value) => {
+                        match value.packet_type {
+                            PacketDisconnect => {
+                                self.connection_state = CommsDisconnected;
+                                Err(PollDisconnected)
+                            },
+                            _ => Ok(value)
+                        }
+                    },
+                    _ => Err(PollEmpty)
+                }
+            },
+            _ => Err(PollDisconnected)
         }
     }
 
