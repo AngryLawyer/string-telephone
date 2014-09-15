@@ -32,7 +32,7 @@ fn main () {
                             _ => ()
                         }
                     },
-                    None => break
+                    None => ()
                 };
                 
                 match recv.try_recv() {
