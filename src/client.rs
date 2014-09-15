@@ -13,7 +13,7 @@ pub enum ConnectionState {
     CommsConnected
 }
 
-fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_sub_in: Receiver<Command>, target_addr: SocketAddr, protocol_id: u32) {
+fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Command>, target_addr: SocketAddr, protocol_id: u32) {
     let mut buf = [0, ..255];
     reader.set_timeout(Some(1000));
     loop {
@@ -23,7 +23,7 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_
                     match Packet::deserialize(buf.slice_to(amt)) {
                         Ok(packet) => {
                             if packet.protocol_id == protocol_id {
-                                reader_sub_out.send(packet);
+                                send.send(packet);
                             }
                         },
                         Err(_) => ()
@@ -33,7 +33,7 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_
             Err(e) => {
                 match e.kind {
                     TimedOut => {
-                        match reader_sub_in.try_recv() {
+                        match recv.try_recv() {
                             Ok(Disconnect) => {
                                 break;
                             },
@@ -52,8 +52,8 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<Packet>, reader_
     }
 }
 
-fn writer_process(mut writer: UdpSocket, writer_sub_out: Sender<Command>, writer_sub_in: Receiver<Packet>, target_addr: SocketAddr) {
-    for msg in writer_sub_in.iter() {
+fn writer_process(mut writer: UdpSocket, send: Sender<Command>, recv: Receiver<Packet>, target_addr: SocketAddr) {
+    for msg in recv.iter() {
         match msg.serialize() {
             Ok(msg) => {
                 match writer.send_to(msg.as_slice(), target_addr) {
@@ -92,27 +92,27 @@ impl Client {
             Ok(reader) => {
                 let writer = reader.clone();
 
-                let (reader_out, reader_sub_in) = channel();
-                let (reader_sub_out, reader_in) = channel();
+                let (reader_send, reader_task_receive) = channel();
+                let (reader_task_send, reader_receive) = channel();
 
                 spawn(proc() {
-                    reader_process(reader, reader_sub_out, reader_sub_in, target_addr, protocol_id);
+                    reader_process(reader, reader_task_send, reader_task_receive, target_addr, protocol_id);
                 });
 
-                let (writer_out, writer_sub_in) = channel();
-                let (writer_sub_out, writer_in) = channel();
+                let (writer_send, writer_task_receive) = channel();
+                let (writer_task_send, writer_receive) = channel();
 
                 spawn(proc() {
-                    writer_process(writer, writer_sub_out, writer_sub_in, target_addr);
+                    writer_process(writer, writer_task_send, writer_task_receive, target_addr);
                 });
 
                 let mut client = Client {
                     addr: addr,
                     target_addr: target_addr,
-                    reader_send: reader_out,
-                    reader_receive: reader_in,
-                    writer_send: writer_out,
-                    writer_receive: writer_in,
+                    reader_send: reader_send,
+                    reader_receive: reader_receive,
+                    writer_send: writer_send,
+                    writer_receive: writer_receive,
                     protocol_id: protocol_id,
                     connection_state: CommsDisconnected
                 };
