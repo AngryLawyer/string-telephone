@@ -4,7 +4,7 @@ use std::io::{IoResult, IoError, OtherIoError, TimedOut};
 use std::io::Timer;
 use std::comm::{Disconnected, Empty, Select};
 use std::time::duration::Duration;
-use packet::{Packet, PacketConnect, PacketAccept, PacketReject, PacketDisconnect, Command, Disconnect};
+use packet::{Packet, PacketAccept, PacketReject, PacketDisconnect, Command, Disconnect};
 use time;
 
 
@@ -65,7 +65,7 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Co
     }
 }
 
-fn writer_process(mut writer: UdpSocket, send: Sender<Command>, recv: Receiver<Packet>, target_addr: SocketAddr) {
+fn writer_process(mut writer: UdpSocket, _send: Sender<Command>, recv: Receiver<Packet>, target_addr: SocketAddr) {
     for msg in recv.iter() {
         match msg.serialize() {
             Ok(msg) => {
@@ -87,7 +87,6 @@ pub struct Client <T> {
     pub target_addr: SocketAddr,
 
     protocol_id: u32,
-    timeout_period: u32,
     connection_state: ConnectionState,
 
     reader_send: Sender<Command>,
@@ -130,7 +129,6 @@ impl <T> Client <T> {
                     writer_send: writer_send,
                     writer_receive: writer_receive,
                     protocol_id: protocol_id,
-                    timeout_period: timeout_period,
                     connection_state: CommsDisconnected,
                     packet_serializer: packet_serializer,
                     packet_deserializer: packet_deserializer

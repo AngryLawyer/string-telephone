@@ -1,11 +1,9 @@
 use std::io::net::udp::UdpSocket;
 use std::io::net::ip::{SocketAddr, Ipv4Addr, Ipv6Addr};
-use std::io::{IoResult, IoError, OtherIoError, TimedOut};
-use std::io::Timer;
-use std::comm::{Disconnected, Empty, Select};
-use std::time::duration::Duration;
+use std::io::{IoResult, TimedOut};
+use std::comm::{Disconnected, Empty};
 use std::collections::TreeMap;
-use packet::{Packet, PacketType, PacketConnect, PacketDisconnect, PacketMessage, PacketAccept, PacketReject, Command, Disconnect};
+use packet::{Packet, PacketConnect, PacketDisconnect, PacketMessage, Command, Disconnect};
 use time;
 
 
@@ -79,7 +77,7 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<(Packet, SocketA
     }
 }
 
-fn writer_process(mut writer: UdpSocket, writer_sub_out: Sender<Command>, writer_sub_in: Receiver<(Packet, SocketAddr)>) {
+fn writer_process(mut writer: UdpSocket, _writer_sub_out: Sender<Command>, writer_sub_in: Receiver<(Packet, SocketAddr)>) {
     for (msg, target_addr) in writer_sub_in.iter() {
         match msg.serialize() {
             Ok(msg) => {
