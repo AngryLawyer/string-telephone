@@ -87,6 +87,7 @@ pub struct Client {
     pub target_addr: SocketAddr,
 
     protocol_id: u32,
+    timeout_period: u32,
     connection_state: ConnectionState,
 
     reader_send: Sender<Command>,
@@ -100,7 +101,7 @@ impl Client {
     /**
      * Connect our Client to a target Server
      */
-    pub fn connect(addr: SocketAddr, target_addr: SocketAddr, protocol_id: u32) -> IoResult<Client> {
+    pub fn connect(addr: SocketAddr, target_addr: SocketAddr, protocol_id: u32, timeout_period: u32) -> IoResult<Client> {
          match UdpSocket::bind(addr) {
             Ok(reader) => {
                 let writer = reader.clone();
@@ -109,7 +110,7 @@ impl Client {
                 let (reader_task_send, reader_receive) = channel();
 
                 spawn(proc() {
-                    reader_process(reader, reader_task_send, reader_task_receive, target_addr, protocol_id, 10);
+                    reader_process(reader, reader_task_send, reader_task_receive, target_addr, protocol_id, timeout_period);
                 });
 
                 let (writer_send, writer_task_receive) = channel();
@@ -127,6 +128,7 @@ impl Client {
                     writer_send: writer_send,
                     writer_receive: writer_receive,
                     protocol_id: protocol_id,
+                    timeout_period: timeout_period,
                     connection_state: CommsDisconnected
                 };
 
@@ -185,7 +187,6 @@ impl Client {
             }
         }
 
-        //We didn't manage to connect
         match self.connection_state {
             CommsConnecting => {
                 self.connection_state = CommsDisconnected;

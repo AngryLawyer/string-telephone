@@ -6,7 +6,7 @@ use string_telephone::client;
 use string_telephone::packet::{Packet, PacketMessage};
 
 fn main () {
-    match client::Client::connect(SocketAddr {ip: Ipv4Addr(0, 0, 0, 0), port: 0}, SocketAddr {ip: Ipv4Addr(127, 0, 0, 1), port: 6666}, 121) {
+    match client::Client::connect(SocketAddr {ip: Ipv4Addr(0, 0, 0, 0), port: 0}, SocketAddr {ip: Ipv4Addr(127, 0, 0, 1), port: 6666}, 121, 10) {
         Ok(ref mut connection) => {
             println!("Connected!")
 

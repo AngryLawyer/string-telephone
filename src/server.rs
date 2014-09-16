@@ -97,6 +97,8 @@ pub struct ServerManager {
     pub addr: SocketAddr,
 
     protocol_id: u32,
+    timeout_period: u32,
+
     reader_send: Sender<Command>,
     reader_receive: Receiver<(Packet, SocketAddr)>,
     writer_send: Sender<(Packet, SocketAddr)>,
@@ -106,7 +108,7 @@ pub struct ServerManager {
 }
 
 impl ServerManager {
-    pub fn new(protocol_id: u32, addr: SocketAddr) -> IoResult<ServerManager> {
+    pub fn new(protocol_id: u32, addr: SocketAddr, timeout_period: u32) -> IoResult<ServerManager> {
         match UdpSocket::bind(addr) {
             Ok(reader) => {
                 let writer = reader.clone();
@@ -126,6 +128,7 @@ impl ServerManager {
                 
                 Ok(ServerManager {
                     protocol_id: protocol_id,
+                    timeout_period: timeout_period,
                     addr: addr,
                     reader_send: reader_out,
                     reader_receive: reader_in,
@@ -146,7 +149,7 @@ impl ServerManager {
                     //Handle any new connections
                     match packet.packet_type {
                         PacketConnect => {
-                            self.connections.insert(hash_sender(&src), ClientInstance::new(src, time::now().to_timespec().sec + 10)); //FIXME: Shouldn't be done here
+                            self.connections.insert(hash_sender(&src), ClientInstance::new(src, time::now().to_timespec().sec + self.timeout_period as i64));
                             self.writer_send.send((Packet::accept(self.protocol_id), src));
                             out = Some((packet, src));
                             break
@@ -165,7 +168,7 @@ impl ServerManager {
                                 Some(ref mut comms) => {
                                     out = Some((packet, src));
                                     //Update our timeout
-                                    comms.timeout = time::now().to_timespec().sec + 10; //FIXME: Stop hardcoding
+                                    comms.timeout = time::now().to_timespec().sec + self.timeout_period as i64;
                                     break
                                 },
                                 None => ()
