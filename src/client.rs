@@ -95,7 +95,7 @@ pub struct Client <T> {
     writer_send: Sender<Packet>,
     writer_receive: Receiver<Command>,
 
-    packet_deserializer: fn(Option<SocketAddr>, &Vec<u8>) -> T,
+    packet_deserializer: fn(&Vec<u8>) -> T,
     packet_serializer: fn(&T) -> Vec<u8> 
 }
 
@@ -103,7 +103,7 @@ impl <T> Client <T> {
     /**
      * Connect our Client to a target Server
      */
-    pub fn connect(addr: SocketAddr, target_addr: SocketAddr, protocol_id: u32, timeout_period: u32, packet_deserializer: fn(Option<SocketAddr>, &Vec<u8>) -> T, packet_serializer: fn(&T) -> Vec<u8>) -> IoResult<Client<T>> {
+    pub fn connect(addr: SocketAddr, target_addr: SocketAddr, protocol_id: u32, timeout_period: u32, packet_deserializer: fn(&Vec<u8>) -> T, packet_serializer: fn(&T) -> Vec<u8>) -> IoResult<Client<T>> {
          match UdpSocket::bind(addr) {
             Ok(reader) => {
                 let writer = reader.clone();
@@ -216,7 +216,7 @@ impl <T> Client <T> {
                                 self.connection_state = CommsDisconnected;
                                 Err(PollDisconnected)
                             },
-                            _ => Ok((self.packet_deserializer)(None, &value.packet_content.unwrap()))
+                            _ => Ok((self.packet_deserializer)(&value.packet_content.unwrap()))
                         }
                     },
                     _ => Err(PollEmpty)

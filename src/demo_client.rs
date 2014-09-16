@@ -1,16 +1,20 @@
 extern crate string_telephone;
+extern crate collections;
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::io;
+use collections::str::{Slice, Owned};
 
 use string_telephone::client;
-use string_telephone::packet::{Packet, PacketMessage};
 
-fn deserializer(addr: Option<SocketAddr>, message: &Vec<u8>) -> Vec<u8> {
-    message.clone()
+fn deserializer(message: &Vec<u8>) -> String {
+    match String::from_utf8_lossy(message.as_slice()) {
+        Slice(slice) => slice.to_string(),
+        Owned(item) => item
+    }
 }
 
-fn serializer(packet: &Vec<u8>) -> Vec<u8> {
-    packet.clone()
+fn serializer(packet: &String) -> Vec<u8> {
+    packet.clone().into_bytes()
 }
 
 fn main () {
@@ -34,12 +38,7 @@ fn main () {
             loop {
                 match connection.poll() {
                     Ok(message) => {
-                        match message.packet_type {
-                            PacketMessage => {
-                                println!("{}", message.packet_content.unwrap().into_ascii().into_string())
-                            },
-                            _ => ()
-                        }
+                        println!("{}", message);
                     },
                     Err(client::PollDisconnected) => {
                         println!("Timed out");
@@ -50,7 +49,7 @@ fn main () {
                 
                 match recv.try_recv() {
                     Ok(text) => {
-                        connection.send(&Packet::message(121, text.into_bytes()));
+                        connection.send(&text);
                     },
                     Err(_) => ()
                 }
