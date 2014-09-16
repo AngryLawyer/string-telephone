@@ -183,16 +183,16 @@ impl ServerManager {
     }
 
     pub fn cull(&mut self) {
-        let mut culled = TreeMap::new();
+        let mut keep_alive = TreeMap::new();
         let now = time::now().to_timespec().sec;
 
         for (hash, connection) in self.connections.iter() {
             if connection.timeout >= now {
-                culled.insert(hash.clone(), connection.clone());
+                keep_alive.insert(hash.clone(), connection.clone());
             }
         };
 
-        self.connections = culled;
+        self.connections = keep_alive;
     }
 
     pub fn send_to(&mut self, packet: &Packet, addr: &SocketAddr) {
