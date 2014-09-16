@@ -82,7 +82,7 @@ fn writer_process(mut writer: UdpSocket, send: Sender<Command>, recv: Receiver<P
 /**
  * Clientside implementation of UDP networking
  */
-pub struct Client {
+pub struct Client <T> {
     pub addr: SocketAddr,
     pub target_addr: SocketAddr,
 
@@ -93,15 +93,17 @@ pub struct Client {
     reader_send: Sender<Command>,
     reader_receive: Receiver<Packet>,
     writer_send: Sender<Packet>,
-    writer_receive: Receiver<Command>
+    writer_receive: Receiver<Command>,
+
+    packet_deserializer: fn(Option<SocketAddr>, &Vec<u8>) -> T,
+    packet_serializer: fn(&T) -> Vec<u8> 
 }
 
-
-impl Client {
+impl <T> Client <T> {
     /**
      * Connect our Client to a target Server
      */
-    pub fn connect(addr: SocketAddr, target_addr: SocketAddr, protocol_id: u32, timeout_period: u32) -> IoResult<Client> {
+    pub fn connect(addr: SocketAddr, target_addr: SocketAddr, protocol_id: u32, timeout_period: u32, packet_deserializer: fn(Option<SocketAddr>, &Vec<u8>) -> T, packet_serializer: fn(&T) -> Vec<u8>) -> IoResult<Client<T>> {
          match UdpSocket::bind(addr) {
             Ok(reader) => {
                 let writer = reader.clone();
@@ -129,7 +131,9 @@ impl Client {
                     writer_receive: writer_receive,
                     protocol_id: protocol_id,
                     timeout_period: timeout_period,
-                    connection_state: CommsDisconnected
+                    connection_state: CommsDisconnected,
+                    packet_serializer: packet_serializer,
+                    packet_deserializer: packet_deserializer
                 };
 
                 if client.connection_dance() {
@@ -202,7 +206,7 @@ impl Client {
     /**
      * Pop the last event off of our comms queue, if any
      */
-    pub fn poll(&mut self) -> Result<Packet, PollFailResult> {
+    pub fn poll(&mut self) -> Result<T, PollFailResult> {
         match self.connection_state {
             CommsConnected => {
                 match self.reader_receive.try_recv() {
@@ -212,7 +216,7 @@ impl Client {
                                 self.connection_state = CommsDisconnected;
                                 Err(PollDisconnected)
                             },
-                            _ => Ok(value)
+                            _ => Ok((self.packet_deserializer)(None, &value.packet_content.unwrap()))
                         }
                     },
                     _ => Err(PollEmpty)
@@ -222,12 +226,13 @@ impl Client {
         }
     }
 
-    pub fn send(&mut self, packet: &Packet) {
-        self.writer_send.send(packet.clone());
+    pub fn send(&mut self, packet: &T) {
+        self.writer_send.send(Packet::message(self.protocol_id, (self.packet_serializer)(packet)));
     }
 }
 
-impl Drop for Client {
+#[unsafe_destructor]
+impl<T> Drop for Client<T> {
 
     fn drop(&mut self) {
         self.reader_send.send(Disconnect);
