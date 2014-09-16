@@ -21,7 +21,10 @@ fn main () {
                         None => break
                     }
                 };
-                server.cull();
+                let culled = server.cull();
+                if culled.len() > 0 {
+                    println!("{}", culled);
+                }
             }
         },
         Err(e) => println!("{}", e)
