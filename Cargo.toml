@@ -12,9 +12,9 @@ path = "src/lib.rs"
 [[bin]]
 
 name = "demo_client"
-path = "src/demo_client.rs"
+path = "src/demo/demo_client.rs"
 
 [[bin]]
 
 name = "demo_server"
-path = "src/demo_server.rs"
+path = "src/demo/demo_server.rs"
