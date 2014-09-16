@@ -27,7 +27,7 @@ fn main () {
                     Ok(message) => {
                         match message.packet_type {
                             PacketMessage => {
-                                println!("{}", message.packet_content.into_ascii().into_string())
+                                println!("{}", message.packet_content.unwrap().into_ascii().into_string())
                             },
                             _ => ()
                         }

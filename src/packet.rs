@@ -14,7 +14,7 @@ pub enum PacketType {
 pub struct Packet {
     pub protocol_id: u32,
     pub packet_type: PacketType,
-    pub packet_content: Vec<u8>
+    pub packet_content: Option<Vec<u8>>
 }
 
 pub enum Command {
@@ -27,7 +27,7 @@ impl Packet {
         Packet {
             protocol_id: protocol_id,
             packet_type: PacketConnect,
-            packet_content: vec![]
+            packet_content: None
         }
     }
 
@@ -35,7 +35,7 @@ impl Packet {
         Packet {
             protocol_id: protocol_id,
             packet_type: PacketDisconnect,
-            packet_content: vec![]
+            packet_content: None
         }
     }
     
@@ -43,7 +43,7 @@ impl Packet {
         Packet {
             protocol_id: protocol_id,
             packet_type: PacketAccept,
-            packet_content: vec![]
+            packet_content: None
         }
     }
 
@@ -51,7 +51,7 @@ impl Packet {
         Packet {
             protocol_id: protocol_id,
             packet_type: PacketMessage,
-            packet_content: message
+            packet_content: Some(message)
         }
     }
 
@@ -66,7 +66,7 @@ impl Packet {
                 Ok(Packet {
                     protocol_id: protocol_id,
                     packet_type: packet_type,
-                    packet_content: content
+                    packet_content: if content.len() > 0 { Some(content) } else { None }
                 })
             },
             None => Err(IoError {
@@ -82,7 +82,12 @@ impl Packet {
         let mut w = MemWriter::new();
         try!(w.write_be_u32(self.protocol_id));
         try!(w.write_u8(self.packet_type as u8));
-        try!(w.write(self.packet_content.as_slice()));
+        match self.packet_content {
+            Some(ref content) => {
+                try!(w.write(content.as_slice()))
+            },
+            None => ()
+        }
         Ok(w.unwrap())
     }
 }
