@@ -3,7 +3,7 @@ use std::io::net::ip::{SocketAddr, Ipv4Addr, Ipv6Addr};
 use std::io::{IoResult, TimedOut};
 use std::comm::{Disconnected, Empty};
 use std::collections::TreeMap;
-use packet::{Packet, PacketConnect, PacketDisconnect, PacketMessage, Command, Disconnect};
+use packet::{Packet, PacketType, PacketConnect, PacketDisconnect, PacketMessage, Command, Disconnect};
 use time;
 
 
@@ -32,6 +32,11 @@ impl ClientInstance {
             timeout: timeout
         }
     }
+}
+
+pub enum PacketOrCommand <T> {
+    UserPacket(T),
+    Command(PacketType)
 }
 
 /**
@@ -91,7 +96,7 @@ fn writer_process(mut writer: UdpSocket, _writer_sub_out: Sender<Command>, write
     }
 }
 
-pub struct ServerManager {
+pub struct ServerManager <T> {
     pub addr: SocketAddr,
 
     protocol_id: u32,
@@ -102,11 +107,14 @@ pub struct ServerManager {
     writer_send: Sender<(Packet, SocketAddr)>,
     writer_receive: Receiver<Command>,
 
+    packet_deserializer: fn(&Vec<u8>) -> T,
+    packet_serializer: fn(&T) -> Vec<u8>,
+
     connections: TreeMap<String, ClientInstance>
 }
 
-impl ServerManager {
-    pub fn new(protocol_id: u32, addr: SocketAddr, timeout_period: u32) -> IoResult<ServerManager> {
+impl <T> ServerManager <T> {
+    pub fn new(protocol_id: u32, addr: SocketAddr, timeout_period: u32, packet_deserializer: fn(&Vec<u8>) -> T, packet_serializer: fn(&T) -> Vec<u8>) -> IoResult<ServerManager<T>> {
         match UdpSocket::bind(addr) {
             Ok(reader) => {
                 let writer = reader.clone();
@@ -132,6 +140,8 @@ impl ServerManager {
                     reader_receive: reader_in,
                     writer_send: writer_out,
                     writer_receive: writer_in,
+                    packet_serializer: packet_serializer,
+                    packet_deserializer: packet_deserializer,
                     connections: TreeMap::new()
                 })
             }
@@ -139,7 +149,7 @@ impl ServerManager {
         }
     }
 
-    pub fn poll(&mut self) -> Option<(Packet, SocketAddr)> {
+    pub fn poll(&mut self) -> Option<(PacketOrCommand<T>, SocketAddr)> {
         let mut out = None;
         loop {
             match self.reader_receive.try_recv() {
@@ -149,13 +159,13 @@ impl ServerManager {
                         PacketConnect => {
                             self.connections.insert(hash_sender(&src), ClientInstance::new(src, time::now().to_timespec().sec + self.timeout_period as i64));
                             self.writer_send.send((Packet::accept(self.protocol_id), src));
-                            out = Some((packet, src));
+                            out = Some((Command(PacketConnect), src));
                             break
                         },
                         PacketDisconnect => {
                             let hash = hash_sender(&src);
                             if self.connections.contains_key(&hash) {
-                                out = Some((packet, src));
+                                out = Some((Command(PacketConnect), src));
                                 self.connections.remove(&hash);
                                 break
                             }
@@ -164,7 +174,7 @@ impl ServerManager {
                             let hash = hash_sender(&src);
                             match self.connections.find_mut(&hash) {
                                 Some(ref mut comms) => {
-                                    out = Some((packet, src));
+                                    out = Some((UserPacket((self.packet_deserializer)(&packet.packet_content.unwrap())), src));
                                     //Update our timeout
                                     comms.timeout = time::now().to_timespec().sec + self.timeout_period as i64;
                                     break
@@ -201,28 +211,29 @@ impl ServerManager {
         culled
     }
 
-    pub fn send_to(&mut self, packet: &Packet, addr: &SocketAddr) {
+    pub fn send_to(&mut self, packet: &T, addr: &SocketAddr) {
         let hashed = hash_sender(addr);
         match self.connections.find(&hashed) {
-            Some(_) => self.writer_send.send((packet.clone(), addr.clone())),
+            Some(_) => self.writer_send.send((Packet::message(self.protocol_id, (self.packet_serializer)(packet)), addr.clone())),
             None => (),
         }
     }
 
-    pub fn send_to_many(&mut self, packet: &Packet, addrs: &Vec<SocketAddr>) {
+    pub fn send_to_many(&mut self, packet: &T, addrs: &Vec<SocketAddr>) {
         for addr in addrs.iter() {
             self.send_to(packet, addr)
         }
     }
 
-    pub fn send_to_all(&mut self, packet: &Packet) {
+    pub fn send_to_all(&mut self, packet: &T) {
         for addr in self.connections.clone().values() { //FIXME: Urgh
             self.send_to(packet, &addr.addr)
         }
     }
 }
 
-impl Drop for ServerManager {
+#[unsafe_destructor]
+impl <T> Drop for ServerManager <T> {
 
     fn drop(&mut self) {
         self.reader_send.send(Disconnect);
