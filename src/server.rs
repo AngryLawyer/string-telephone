@@ -184,9 +184,12 @@ impl ServerManager {
 
     pub fn cull(&mut self) {
         let mut culled = TreeMap::new();
+        let now = time::now().to_timespec().sec;
 
-        for (hash, connection) in self.connections.move_iter() {
-            culled.insert(hash, connection);
+        for (hash, connection) in self.connections.iter() {
+            if connection.timeout >= now {
+                culled.insert(hash.clone(), connection.clone());
+            }
         };
 
         self.connections = culled;

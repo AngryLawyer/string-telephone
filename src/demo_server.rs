@@ -8,17 +8,20 @@ fn main () {
     match server::ServerManager::new(121, SocketAddr {ip: Ipv4Addr(127, 0, 0, 1), port: 6666}) {
         Ok(ref mut server) => {
             loop {
-                match server.poll() {
-                    Some((packet, _)) => {
-                        match packet.packet_type {
-                            PacketMessage => {
-                                server.send_to_all(&packet);
-                            },
-                            _ => ()
-                        }
-                    },
-                    None => ()
-                }
+                loop {
+                    match server.poll() {
+                        Some((packet, _)) => {
+                            match packet.packet_type {
+                                PacketMessage => {
+                                    server.send_to_all(&packet);
+                                },
+                                _ => ()
+                            }
+                        },
+                        None => break
+                    }
+                };
+                server.cull();
             }
         },
         Err(e) => println!("{}", e)
