@@ -5,7 +5,7 @@ use std::comm::{Disconnected, Empty};
 use std::collections::TreeMap;
 use packet::{Packet, PacketType, PacketConnect, PacketDisconnect, PacketMessage, Command, Disconnect};
 use shared::ConnectionConfig;
-use time;
+use time::now;
 
 
 //FIXME: Ew ew ew
@@ -144,7 +144,7 @@ impl <T> Server <T> {
                     //Handle any new connections
                     match packet.packet_type {
                         PacketConnect => {
-                            self.connections.insert(hash_sender(&src), ClientInstance::new(src, time::now().to_timespec().sec + self.config.timeout_period as i64));
+                            self.connections.insert(hash_sender(&src), ClientInstance::new(src, now().to_timespec().sec + self.config.timeout_period as i64));
                             self.writer_send.send((Packet::accept(self.config.protocol_id), src));
                             out = Some((Command(PacketConnect), src));
                             break
@@ -163,7 +163,7 @@ impl <T> Server <T> {
                                 Some(ref mut comms) => {
                                     out = Some((UserPacket((self.config.packet_deserializer)(&packet.packet_content.unwrap())), src));
                                     //Update our timeout
-                                    comms.timeout = time::now().to_timespec().sec + self.config.timeout_period as i64;
+                                    comms.timeout = now().to_timespec().sec + self.config.timeout_period as i64;
                                     break
                                 },
                                 None => ()
@@ -184,7 +184,7 @@ impl <T> Server <T> {
         let mut keep_alive = TreeMap::new();
         let mut culled = vec![];
 
-        let now = time::now().to_timespec().sec;
+        let now = now().to_timespec().sec;
 
         for (hash, connection) in self.connections.iter() {
             if connection.timeout >= now {

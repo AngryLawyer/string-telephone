@@ -6,7 +6,7 @@ use std::comm::{Disconnected, Empty, Select};
 use std::time::duration::Duration;
 use packet::{Packet, PacketAccept, PacketReject, PacketDisconnect, Command, Disconnect};
 use shared::ConnectionConfig;
-use time;
+use time::now;
 
 
 pub enum ConnectionState {
@@ -24,7 +24,7 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Co
     let mut buf = [0, ..255];
     reader.set_timeout(Some(1000));
 
-    let mut expires = time::now().to_timespec().sec + timeout_period as i64;
+    let mut expires = now().to_timespec().sec + timeout_period as i64;
 
     loop {
         match reader.recv_from(buf) {
@@ -34,7 +34,7 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Co
                         Ok(packet) => {
                             if packet.protocol_id == protocol_id {
                                 send.send(packet);
-                                expires = time::now().to_timespec().sec + timeout_period as i64;
+                                expires = now().to_timespec().sec + timeout_period as i64;
                             }
                         },
                         Err(_) => ()
@@ -60,7 +60,7 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Co
                 }
             }
         };
-        if time::now().to_timespec().sec > expires {
+        if now().to_timespec().sec > expires {
             send.send(Packet::disconnect(protocol_id))
         }
     }

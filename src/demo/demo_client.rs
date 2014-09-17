@@ -4,8 +4,7 @@ extern crate collections;
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::io;
 
-use string_telephone::client;
-use string_telephone::ConnectionConfig;
+use string_telephone::{ConnectionConfig, Client, PollDisconnected};
 
 mod demo_shared;
 
@@ -19,7 +18,7 @@ fn main () {
         packet_serializer: demo_shared::serializer
     };
 
-    match client::Client::connect(SocketAddr {ip: Ipv4Addr(0, 0, 0, 0), port: 0}, SocketAddr {ip: Ipv4Addr(127, 0, 0, 1), port: 6666}, settings) {
+    match Client::connect(SocketAddr {ip: Ipv4Addr(0, 0, 0, 0), port: 0}, SocketAddr {ip: Ipv4Addr(127, 0, 0, 1), port: 6666}, settings) {
         Ok(ref mut connection) => {
             println!("Connected!")
 
@@ -40,7 +39,7 @@ fn main () {
                     Ok(message) => {
                         println!("{}", message);
                     },
-                    Err(client::PollDisconnected) => {
+                    Err(PollDisconnected) => {
                         println!("Timed out");
                         break
                     },

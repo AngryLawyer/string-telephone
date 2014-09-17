@@ -7,6 +7,8 @@ extern crate time;
 
 pub use packet::*;
 pub use shared::*;
+pub use client::*;
+pub use server::*;
 
 pub mod packet;
 pub mod shared;

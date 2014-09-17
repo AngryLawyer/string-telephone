@@ -2,8 +2,7 @@ extern crate collections;
 extern crate string_telephone;
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 
-use string_telephone::server;
-use string_telephone::ConnectionConfig;
+use string_telephone::{ConnectionConfig, Server, UserPacket};
 
 mod demo_shared;
 
@@ -15,12 +14,12 @@ fn main () {
         packet_serializer: demo_shared::serializer
     };
 
-    match server::Server::new(SocketAddr {ip: Ipv4Addr(127, 0, 0, 1), port: 6666}, settings) {
+    match Server::new(SocketAddr {ip: Ipv4Addr(127, 0, 0, 1), port: 6666}, settings) {
         Ok(ref mut server) => {
             loop {
                 loop {
                     match server.poll() {
-                        Some((server::UserPacket(packet), _)) => {
+                        Some((UserPacket(packet), _)) => {
                             server.send_to_all(&packet);
                         },
                         Some(_) => (),
