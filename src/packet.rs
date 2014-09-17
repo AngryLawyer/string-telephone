@@ -1,6 +1,7 @@
 use std::io::{IoResult, IoError, OtherIoError};
 use std::io::{BufReader, MemWriter};
 
+///Headers for various different built-in message types
 #[deriving(FromPrimitive, Clone)]
 pub enum PacketType {
     PacketConnect = 0,
@@ -10,13 +11,16 @@ pub enum PacketType {
     PacketMessage
 }
 
+///The underlying shape for transferring data.
 #[deriving(Clone)]
 pub struct Packet {
     pub protocol_id: u32,
     pub packet_type: PacketType,
+    ///Serialized user data goes in here
     pub packet_content: Option<Vec<u8>>
 }
 
+///Commands to send to subprocesses
 pub enum Command {
     Disconnect,
 }

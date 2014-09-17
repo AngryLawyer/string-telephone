@@ -5,6 +5,7 @@ use std::io::Timer;
 use std::comm::{Disconnected, Empty, Select};
 use std::time::duration::Duration;
 use packet::{Packet, PacketAccept, PacketReject, PacketDisconnect, Command, Disconnect};
+use shared::ConnectionConfig;
 use time;
 
 
@@ -85,30 +86,30 @@ fn writer_process(mut writer: UdpSocket, _send: Sender<Command>, recv: Receiver<
 pub struct Client <T> {
     pub addr: SocketAddr,
     pub target_addr: SocketAddr,
+    pub config: ConnectionConfig<T>,
 
-    protocol_id: u32,
     connection_state: ConnectionState,
 
     reader_send: Sender<Command>,
     reader_receive: Receiver<Packet>,
     writer_send: Sender<Packet>,
     writer_receive: Receiver<Command>,
-
-    packet_deserializer: fn(&Vec<u8>) -> T,
-    packet_serializer: fn(&T) -> Vec<u8> 
 }
 
 impl <T> Client <T> {
     /**
      * Connect our Client to a target Server
      */
-    pub fn connect(addr: SocketAddr, target_addr: SocketAddr, protocol_id: u32, timeout_period: u32, packet_deserializer: fn(&Vec<u8>) -> T, packet_serializer: fn(&T) -> Vec<u8>) -> IoResult<Client<T>> {
+    pub fn connect(addr: SocketAddr, target_addr: SocketAddr, config: ConnectionConfig<T>) -> IoResult<Client<T>> {
          match UdpSocket::bind(addr) {
             Ok(reader) => {
                 let writer = reader.clone();
 
                 let (reader_send, reader_task_receive) = channel();
                 let (reader_task_send, reader_receive) = channel();
+
+                let protocol_id = config.protocol_id;
+                let timeout_period = config.timeout_period;
 
                 spawn(proc() {
                     reader_process(reader, reader_task_send, reader_task_receive, target_addr, protocol_id, timeout_period);
@@ -128,10 +129,8 @@ impl <T> Client <T> {
                     reader_receive: reader_receive,
                     writer_send: writer_send,
                     writer_receive: writer_receive,
-                    protocol_id: protocol_id,
                     connection_state: CommsDisconnected,
-                    packet_serializer: packet_serializer,
-                    packet_deserializer: packet_deserializer
+                    config: config
                 };
 
                 if client.connection_dance() {
@@ -158,7 +157,7 @@ impl <T> Client <T> {
 
         while attempts < 3 && match self.connection_state { CommsConnecting => true, _ => false } {
 
-            self.writer_send.send(Packet::connect(self.protocol_id));
+            self.writer_send.send(Packet::connect(self.config.protocol_id));
 
             let timeout = timer.oneshot(Duration::seconds(5));
 
@@ -214,7 +213,7 @@ impl <T> Client <T> {
                                 self.connection_state = CommsDisconnected;
                                 Err(PollDisconnected)
                             },
-                            _ => Ok((self.packet_deserializer)(&value.packet_content.unwrap()))
+                            _ => Ok((self.config.packet_deserializer)(&value.packet_content.unwrap()))
                         }
                     },
                     _ => Err(PollEmpty)
@@ -225,7 +224,7 @@ impl <T> Client <T> {
     }
 
     pub fn send(&mut self, packet: &T) {
-        self.writer_send.send(Packet::message(self.protocol_id, (self.packet_serializer)(packet)));
+        self.writer_send.send(Packet::message(self.config.protocol_id, (self.config.packet_serializer)(packet)));
     }
 }
 

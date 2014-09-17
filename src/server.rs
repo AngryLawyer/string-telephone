@@ -39,14 +39,6 @@ pub enum PacketOrCommand <T> {
     Command(PacketType)
 }
 
-/**
- * What we want:
- * Server sits and loops about. Has a send/receive buffer
- * Has a broadcast method?
- * Has a send method
- * Has a read method, to pump items out of the receive buffer
- * Has a read iterator?
- */
 fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<(Packet, SocketAddr)>, reader_sub_in: Receiver<Command>, protocol_id: u32) {
     let mut buf = [0, ..255];
     reader.set_timeout(Some(1000));
