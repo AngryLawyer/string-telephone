@@ -1,8 +1,12 @@
 #![feature(unsafe_destructor)]
+#![feature(globs)]
 #![crate_name = "string_telephone"]
 #![crate_type="lib"]
 
 extern crate time;
+
+pub use packet::*;
+pub use shared::*;
 
 pub mod packet;
 pub mod shared;

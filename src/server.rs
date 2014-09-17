@@ -4,6 +4,7 @@ use std::io::{IoResult, TimedOut};
 use std::comm::{Disconnected, Empty};
 use std::collections::TreeMap;
 use packet::{Packet, PacketType, PacketConnect, PacketDisconnect, PacketMessage, Command, Disconnect};
+use shared::ConnectionConfig;
 use time;
 
 
@@ -88,30 +89,27 @@ fn writer_process(mut writer: UdpSocket, _writer_sub_out: Sender<Command>, write
     }
 }
 
-pub struct ServerManager <T> {
+pub struct Server <T> {
     pub addr: SocketAddr,
-
-    protocol_id: u32,
-    timeout_period: u32,
+    pub config: ConnectionConfig<T>,
 
     reader_send: Sender<Command>,
     reader_receive: Receiver<(Packet, SocketAddr)>,
     writer_send: Sender<(Packet, SocketAddr)>,
     writer_receive: Receiver<Command>,
 
-    packet_deserializer: fn(&Vec<u8>) -> T,
-    packet_serializer: fn(&T) -> Vec<u8>,
-
     connections: TreeMap<String, ClientInstance>
 }
 
-impl <T> ServerManager <T> {
-    pub fn new(protocol_id: u32, addr: SocketAddr, timeout_period: u32, packet_deserializer: fn(&Vec<u8>) -> T, packet_serializer: fn(&T) -> Vec<u8>) -> IoResult<ServerManager<T>> {
+impl <T> Server <T> {
+    pub fn new(addr: SocketAddr, config: ConnectionConfig<T>) -> IoResult<Server<T>> {
         match UdpSocket::bind(addr) {
             Ok(reader) => {
                 let writer = reader.clone();
                 let (reader_out, reader_sub_in) = channel();
                 let (reader_sub_out, reader_in) = channel();
+
+                let protocol_id = config.protocol_id;
 
                 spawn(proc() {
                     reader_process(reader, reader_sub_out, reader_sub_in, protocol_id);
@@ -124,16 +122,13 @@ impl <T> ServerManager <T> {
                     writer_process(writer, writer_sub_out, writer_sub_in);
                 });
                 
-                Ok(ServerManager {
-                    protocol_id: protocol_id,
-                    timeout_period: timeout_period,
+                Ok(Server {
                     addr: addr,
+                    config: config,
                     reader_send: reader_out,
                     reader_receive: reader_in,
                     writer_send: writer_out,
                     writer_receive: writer_in,
-                    packet_serializer: packet_serializer,
-                    packet_deserializer: packet_deserializer,
                     connections: TreeMap::new()
                 })
             }
@@ -149,8 +144,8 @@ impl <T> ServerManager <T> {
                     //Handle any new connections
                     match packet.packet_type {
                         PacketConnect => {
-                            self.connections.insert(hash_sender(&src), ClientInstance::new(src, time::now().to_timespec().sec + self.timeout_period as i64));
-                            self.writer_send.send((Packet::accept(self.protocol_id), src));
+                            self.connections.insert(hash_sender(&src), ClientInstance::new(src, time::now().to_timespec().sec + self.config.timeout_period as i64));
+                            self.writer_send.send((Packet::accept(self.config.protocol_id), src));
                             out = Some((Command(PacketConnect), src));
                             break
                         },
@@ -166,9 +161,9 @@ impl <T> ServerManager <T> {
                             let hash = hash_sender(&src);
                             match self.connections.find_mut(&hash) {
                                 Some(ref mut comms) => {
-                                    out = Some((UserPacket((self.packet_deserializer)(&packet.packet_content.unwrap())), src));
+                                    out = Some((UserPacket((self.config.packet_deserializer)(&packet.packet_content.unwrap())), src));
                                     //Update our timeout
-                                    comms.timeout = time::now().to_timespec().sec + self.timeout_period as i64;
+                                    comms.timeout = time::now().to_timespec().sec + self.config.timeout_period as i64;
                                     break
                                 },
                                 None => ()
@@ -206,7 +201,7 @@ impl <T> ServerManager <T> {
     pub fn send_to(&mut self, packet: &T, addr: &SocketAddr) {
         let hashed = hash_sender(addr);
         match self.connections.find(&hashed) {
-            Some(_) => self.writer_send.send((Packet::message(self.protocol_id, (self.packet_serializer)(packet)), addr.clone())),
+            Some(_) => self.writer_send.send((Packet::message(self.config.protocol_id, (self.config.packet_serializer)(packet)), addr.clone())),
             None => (),
         }
     }
@@ -225,7 +220,7 @@ impl <T> ServerManager <T> {
 }
 
 #[unsafe_destructor]
-impl <T> Drop for ServerManager <T> {
+impl <T> Drop for Server <T> {
 
     fn drop(&mut self) {
         self.reader_send.send(Disconnect);
