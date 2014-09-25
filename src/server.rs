@@ -37,7 +37,7 @@ impl ClientInstance {
 
 pub enum PacketOrCommand <T> {
     UserPacket(T),
-    Command(PacketType)
+    IsCommand(PacketType)
 }
 
 fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<(Packet, SocketAddr)>, reader_sub_in: Receiver<Command>, protocol_id: u32) {
@@ -146,13 +146,13 @@ impl <T> Server <T> {
                         PacketConnect => {
                             self.connections.insert(hash_sender(&src), ClientInstance::new(src, now().to_timespec().sec + self.config.timeout_period as i64));
                             self.writer_send.send((Packet::accept(self.config.protocol_id), src));
-                            out = Some((Command(PacketConnect), src));
+                            out = Some((IsCommand(PacketConnect), src));
                             break
                         },
                         PacketDisconnect => {
                             let hash = hash_sender(&src);
                             if self.connections.contains_key(&hash) {
-                                out = Some((Command(PacketConnect), src));
+                                out = Some((IsCommand(PacketConnect), src));
                                 self.connections.remove(&hash);
                                 break
                             }
