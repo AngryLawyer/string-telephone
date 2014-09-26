@@ -4,7 +4,7 @@ use std::io::{IoResult, IoError, OtherIoError, TimedOut};
 use std::io::Timer;
 use std::comm::{Disconnected, Empty, Select};
 use std::time::duration::Duration;
-use packet::{Packet, PacketAccept, PacketReject, PacketDisconnect, Command, Disconnect};
+use packet::{Packet, PacketAccept, PacketReject, PacketDisconnect, TaskCommand, Disconnect};
 use shared::ConnectionConfig;
 use time::now;
 
@@ -20,7 +20,7 @@ pub enum PollFailResult {
     PollDisconnected
 }
 
-fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Command>, target_addr: SocketAddr, protocol_id: u32, timeout_period: u32) {
+fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<TaskCommand>, target_addr: SocketAddr, protocol_id: u32, timeout_period: u32) {
     let mut buf = [0, ..255];
     reader.set_timeout(Some(1000));
 
@@ -66,7 +66,7 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Co
     }
 }
 
-fn writer_process(mut writer: UdpSocket, _send: Sender<Command>, recv: Receiver<Packet>, target_addr: SocketAddr) {
+fn writer_process(mut writer: UdpSocket, _send: Sender<TaskCommand>, recv: Receiver<Packet>, target_addr: SocketAddr) {
     for msg in recv.iter() {
         match msg.serialize() {
             Ok(msg) => {
@@ -90,10 +90,10 @@ pub struct Client <T> {
 
     connection_state: ConnectionState,
 
-    reader_send: Sender<Command>,
+    reader_send: Sender<TaskCommand>,
     reader_receive: Receiver<Packet>,
     writer_send: Sender<Packet>,
-    writer_receive: Receiver<Command>,
+    writer_receive: Receiver<TaskCommand>,
 }
 
 impl <T> Client <T> {

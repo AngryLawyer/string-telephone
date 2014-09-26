@@ -3,7 +3,7 @@ use std::io::net::ip::{SocketAddr, Ipv4Addr, Ipv6Addr};
 use std::io::{IoResult, TimedOut};
 use std::comm::{Disconnected, Empty};
 use std::collections::TreeMap;
-use packet::{Packet, PacketType, PacketConnect, PacketDisconnect, PacketMessage, Command, Disconnect};
+use packet::{Packet, PacketType, PacketConnect, PacketDisconnect, PacketMessage, TaskCommand, Disconnect};
 use shared::ConnectionConfig;
 use time::now;
 
@@ -37,10 +37,10 @@ impl ClientInstance {
 
 pub enum PacketOrCommand <T> {
     UserPacket(T),
-    IsCommand(PacketType)
+    Command(PacketType)
 }
 
-fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<(Packet, SocketAddr)>, reader_sub_in: Receiver<Command>, protocol_id: u32) {
+fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<(Packet, SocketAddr)>, reader_sub_in: Receiver<TaskCommand>, protocol_id: u32) {
     let mut buf = [0, ..255];
     reader.set_timeout(Some(1000));
     loop {
@@ -75,7 +75,7 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<(Packet, SocketA
     }
 }
 
-fn writer_process(mut writer: UdpSocket, _writer_sub_out: Sender<Command>, writer_sub_in: Receiver<(Packet, SocketAddr)>) {
+fn writer_process(mut writer: UdpSocket, _writer_sub_out: Sender<TaskCommand>, writer_sub_in: Receiver<(Packet, SocketAddr)>) {
     for (msg, target_addr) in writer_sub_in.iter() {
         match msg.serialize() {
             Ok(msg) => {
@@ -93,10 +93,10 @@ pub struct Server <T> {
     pub addr: SocketAddr,
     pub config: ConnectionConfig<T>,
 
-    reader_send: Sender<Command>,
+    reader_send: Sender<TaskCommand>,
     reader_receive: Receiver<(Packet, SocketAddr)>,
     writer_send: Sender<(Packet, SocketAddr)>,
-    writer_receive: Receiver<Command>,
+    writer_receive: Receiver<TaskCommand>,
 
     connections: TreeMap<String, ClientInstance>
 }
@@ -146,13 +146,13 @@ impl <T> Server <T> {
                         PacketConnect => {
                             self.connections.insert(hash_sender(&src), ClientInstance::new(src, now().to_timespec().sec + self.config.timeout_period as i64));
                             self.writer_send.send((Packet::accept(self.config.protocol_id), src));
-                            out = Some((IsCommand(PacketConnect), src));
+                            out = Some((Command(PacketConnect), src));
                             break
                         },
                         PacketDisconnect => {
                             let hash = hash_sender(&src);
                             if self.connections.contains_key(&hash) {
-                                out = Some((IsCommand(PacketConnect), src));
+                                out = Some((Command(PacketConnect), src));
                                 self.connections.remove(&hash);
                                 break
                             }

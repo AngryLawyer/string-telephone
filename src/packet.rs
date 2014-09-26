@@ -21,7 +21,7 @@ pub struct Packet {
 }
 
 ///Commands to send to subprocesses
-pub enum Command {
+pub enum TaskCommand {
     Disconnect,
 }
 
