@@ -156,7 +156,6 @@ impl <T> Client <T> {
         let mut attempts = 0u;
 
         while attempts < 3 && match self.connection_state { CommsConnecting => true, _ => false } {
-
             self.writer_send.send(Packet::connect(self.config.protocol_id));
 
             let timeout = timer.oneshot(Duration::seconds(5));
@@ -169,20 +168,21 @@ impl <T> Client <T> {
             let ret = sel.wait();
             if ret == reader.id() {
                 let packet = self.reader_receive.recv();
-                {
-                    match packet.packet_type {
-                        PacketAccept => {
-                            self.connection_state = CommsConnected;
-                        }
-                        PacketReject => {
-                            self.connection_state = CommsDisconnected;
-                        }
-                        _ => (),
+                match packet.packet_type {
+                    PacketAccept => {
+                        self.connection_state = CommsConnected;
                     }
+                    PacketReject => {
+                        self.connection_state = CommsDisconnected;
+                    }
+                    PacketDisconnect => {
+                        self.connection_state = CommsDisconnected;
+                    }
+                    _ => (),
                 }
             } else if ret == timeout.id() {
                 let () = timeout.recv();
-                { attempts += 1; }
+                attempts += 1;
             } else {
                 fail!("What");
             }
