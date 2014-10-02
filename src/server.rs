@@ -161,10 +161,15 @@ impl <T> Server <T> {
                             let hash = hash_sender(&src);
                             match self.connections.find_mut(&hash) {
                                 Some(ref mut comms) => {
-                                    out = Some((UserPacket((self.config.packet_deserializer)(&packet.packet_content.unwrap())), src));
-                                    //Update our timeout
-                                    comms.timeout = now().to_timespec().sec + self.config.timeout_period as i64;
-                                    break
+                                    match (self.config.packet_deserializer)(&packet.packet_content.unwrap()) {
+                                        Some(deserialized) => {
+                                            out = Some((UserPacket(deserialized), src));
+                                            //Update our timeout
+                                            comms.timeout = now().to_timespec().sec + self.config.timeout_period as i64;
+                                            break
+                                        },
+                                        _ => ()
+                                    }
                                 },
                                 None => ()
                             }

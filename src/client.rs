@@ -4,7 +4,7 @@ use std::io::{IoResult, IoError, OtherIoError, TimedOut};
 use std::io::Timer;
 use std::comm::{Disconnected, Empty, Select};
 use std::time::duration::Duration;
-use packet::{Packet, PacketAccept, PacketReject, PacketDisconnect, TaskCommand, Disconnect};
+use packet::{Packet, PacketAccept, PacketReject, PacketDisconnect, PacketMessage, TaskCommand, Disconnect};
 use shared::ConnectionConfig;
 use time::now;
 
@@ -206,18 +206,32 @@ impl <T> Client <T> {
     pub fn poll(&mut self) -> Result<T, PollFailResult> {
         match self.connection_state {
             CommsConnected => {
-                match self.reader_receive.try_recv() {
-                    Ok(value) => {
-                        match value.packet_type {
-                            PacketDisconnect => {
-                                self.connection_state = CommsDisconnected;
-                                Err(PollDisconnected)
-                            },
-                            _ => Ok((self.config.packet_deserializer)(&value.packet_content.unwrap()))
-                        }
-                    },
-                    _ => Err(PollEmpty)
+                let mut result = Err(PollEmpty);
+                loop {
+                    match self.reader_receive.try_recv() {
+                        Ok(value) => {
+                            match value.packet_type {
+                                PacketDisconnect => {
+                                    self.connection_state = CommsDisconnected;
+                                    result = Err(PollDisconnected);
+                                    break;
+                                },
+                                PacketMessage => {
+                                    match (self.config.packet_deserializer)(&value.packet_content.unwrap()) {
+                                        Some(deserialized) => {
+                                            result = Ok(deserialized);
+                                            break;
+                                        },
+                                        None => ()
+                                    }
+                                },
+                                _ => ()
+                            }
+                        },
+                        _ => break
+                    };
                 }
+                result
             },
             _ => Err(PollDisconnected)
         }
