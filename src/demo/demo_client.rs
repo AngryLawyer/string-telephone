@@ -3,22 +3,19 @@ extern crate collections;
 
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::io;
+use std::time::duration::Duration;
 
-use string_telephone::{ConnectionConfig, Client, PollDisconnected};
+use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, PollDisconnected};
 
 mod demo_shared;
 
 
 fn main () {
 
-    let settings = ConnectionConfig {
-        protocol_id: 121,
-        timeout_period: 10,
-        packet_deserializer: demo_shared::deserializer,
-        packet_serializer: demo_shared::serializer
-    };
+    let settings = ConnectionConfig::new(121, 10, demo_shared::deserializer, demo_shared::serializer);
+    let client_settings = ClientConnectionConfig::new(3, Duration::seconds(5));
 
-    match Client::connect(SocketAddr {ip: Ipv4Addr(0, 0, 0, 0), port: 0}, SocketAddr {ip: Ipv4Addr(127, 0, 0, 1), port: 6666}, settings) {
+    match Client::connect(SocketAddr {ip: Ipv4Addr(0, 0, 0, 0), port: 0}, SocketAddr {ip: Ipv4Addr(127, 0, 0, 1), port: 6666}, settings, client_settings) {
         Ok(ref mut connection) => {
             println!("Connected!")
 

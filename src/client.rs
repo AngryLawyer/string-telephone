@@ -21,7 +21,7 @@ pub enum PollFailResult {
 }
 
 fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<TaskCommand>, target_addr: SocketAddr, protocol_id: u32, timeout_period: u32) {
-    let mut buf = [0, ..255];
+    let mut buf = [0, ..1023];
     reader.set_timeout(Some(1000));
 
     let mut expires = now().to_timespec().sec + timeout_period as i64;
@@ -96,11 +96,29 @@ pub struct Client <T> {
     writer_receive: Receiver<TaskCommand>,
 }
 
+/**
+ * Additional configuration options for a Client connection
+ */
+pub struct ClientConnectionConfig {
+    pub max_connect_retries: uint,
+    pub connect_attempt_timeout: Duration
+}
+
+impl ClientConnectionConfig {
+
+    pub fn new(max_connect_retries: uint, connect_attempt_timeout: Duration) -> ClientConnectionConfig {
+        ClientConnectionConfig {
+            max_connect_retries: max_connect_retries,
+            connect_attempt_timeout: connect_attempt_timeout
+        }
+    }
+}
+
 impl <T> Client <T> {
     /**
      * Connect our Client to a target Server
      */
-    pub fn connect(addr: SocketAddr, target_addr: SocketAddr, config: ConnectionConfig<T>) -> IoResult<Client<T>> {
+    pub fn connect(addr: SocketAddr, target_addr: SocketAddr, config: ConnectionConfig<T>, client_connection_config: ClientConnectionConfig) -> IoResult<Client<T>> {
          match UdpSocket::bind(addr) {
             Ok(reader) => {
                 let writer = reader.clone();
@@ -133,7 +151,7 @@ impl <T> Client <T> {
                     config: config
                 };
 
-                if client.connection_dance() {
+                if client.connection_dance(client_connection_config.max_connect_retries, client_connection_config.connect_attempt_timeout) {
                     Ok(client)
                 } else {
                     Err(IoError {
@@ -150,15 +168,15 @@ impl <T> Client <T> {
     /**
      * A blocking connection request
      */
-    fn connection_dance(&mut self) -> bool {
+    fn connection_dance(&mut self, max_attempts: uint, timeout: Duration) -> bool {
         self.connection_state = CommsConnecting;
         let mut timer = Timer::new().unwrap();
         let mut attempts = 0u;
 
-        while attempts < 3 && match self.connection_state { CommsConnecting => true, _ => false } {
+        while attempts < max_attempts && match self.connection_state { CommsConnecting => true, _ => false } {
             self.writer_send.send(Packet::connect(self.config.protocol_id));
 
-            let timeout = timer.oneshot(Duration::seconds(5));
+            let timeout = timer.oneshot(timeout);
 
             //FIXME: Replace with the select! macro when it starts working
             let sel = Select::new();
@@ -237,6 +255,9 @@ impl <T> Client <T> {
         }
     }
 
+    /**
+     * Send a packet to the server
+     */
     pub fn send(&mut self, packet: &T) {
         self.writer_send.send(Packet::message(self.config.protocol_id, (self.config.packet_serializer)(packet)));
     }

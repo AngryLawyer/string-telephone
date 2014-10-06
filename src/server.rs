@@ -41,7 +41,7 @@ pub enum PacketOrCommand <T> {
 }
 
 fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<(Packet, SocketAddr)>, reader_sub_in: Receiver<TaskCommand>, protocol_id: u32) {
-    let mut buf = [0, ..255];
+    let mut buf = [0, ..1023];
     reader.set_timeout(Some(1000));
     loop {
         match reader.recv_from(buf) {
