@@ -1,4 +1,4 @@
 string-telephone
 ================
 
-Experimental UDP networking abstraction for games in Rust
+Experimental UDP (and eventually TCP) networking abstraction for games in Rust
