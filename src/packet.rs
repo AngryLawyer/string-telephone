@@ -51,6 +51,14 @@ impl Packet {
         }
     }
 
+    pub fn reject(protocol_id: u32) -> Packet {
+        Packet {
+            protocol_id: protocol_id,
+            packet_type: PacketReject,
+            packet_content: None
+        }
+    }
+
     pub fn message(protocol_id: u32, message: Vec<u8>) -> Packet {
         Packet {
             protocol_id: protocol_id,

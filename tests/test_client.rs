@@ -23,6 +23,14 @@ fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, SocketAddr, Co
     (my_addr, target_addr, settings, client_settings)
 }
 
+fn get_message(socket: &mut UdpSocket) -> (Vec<u8>, SocketAddr) {
+    let mut buf = [0, ..255];
+    match socket.recv_from(buf) {
+        Ok((amt, src)) => (buf.slice_to(amt).to_owned(), src),
+        Err(e) => fail!("Socket didn't get a message")
+    }
+}
+
 macro_rules! with_bound_socket(
     ($socket:ident, ($variable:ident)$code:block) => (
         spawn(proc() {
@@ -61,13 +69,8 @@ fn standard_connection() {
     let (my_addr, target_addr, settings, client_settings) = generate_settings(port, 121);
 
     with_bound_socket!(target_addr, (socket) {
-        let mut buf = [0, ..255];
-
-        socket.set_timeout(Some(10000));
-        let (_, src) = match socket.recv_from(buf) {
-            Ok((amt, src)) => (amt, src),
-            Err(e) => fail!("Socket didn't get a message")
-        };
+        socket.set_timeout(Some(1000));
+        let (_, src) = get_message(&mut socket);
         socket.send_to(Packet::accept(121).serialize().unwrap()[], src);
     });
 
@@ -79,15 +82,50 @@ fn standard_connection() {
     };
 }
 
-#[test]
-fn connection_rejected() {
-    unimplemented!();
-}
-
+/**
+ * If the server gives us back a different protocol id, we shouldn't accept it
+ */
 #[test]
 fn connection_different_protocol_id() {
-    unimplemented!();
+    let port = 65002;
+    let (my_addr, target_addr, settings, client_settings) = generate_settings(port, 121);
+
+    with_bound_socket!(target_addr, (socket) {
+        socket.set_timeout(Some(1000));
+        let (_, src) = get_message(&mut socket);
+        socket.send_to(Packet::accept(122).serialize().unwrap()[], src);
+    });
+
+    match Client::connect(my_addr, target_addr, settings, client_settings) {
+        Ok(_) => fail!("Connected to a server with a different protocol ID!"),
+        Err(e) => {
+            assert!(e.desc == "Failed to connect")
+        }
+    };
 }
+
+/**
+ * If the server specifically rejects us, we should give up
+ */
+#[test]
+fn connection_rejected() {
+    let port = 65003;
+    let (my_addr, target_addr, settings, client_settings) = generate_settings(port, 121);
+
+    with_bound_socket!(target_addr, (socket) {
+        socket.set_timeout(Some(1000));
+        let (_, src) = get_message(&mut socket);
+        socket.send_to(Packet::reject(121).serialize().unwrap()[], src);
+    });
+
+    match Client::connect(my_addr, target_addr, settings, client_settings) {
+        Ok(_) => fail!("Connected to a server that rejected us!"),
+        Err(e) => {
+            assert!(e.desc == "Failed to connect")
+        }
+    };
+}
+
 
 #[test]
 fn different_request_count() {
@@ -118,5 +156,15 @@ fn disconnection() {
 
 #[test]
 fn timeout() {
+    unimplemented!();
+}
+
+#[test]
+fn send_correct_handshake() {
+    unimplemented!();
+}
+
+#[test]
+fn send_data() {
     unimplemented!();
 }
