@@ -2,9 +2,10 @@ extern crate string_telephone;
 extern crate collections;
 
 use collections::str::{Slice, Owned};
-use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client};
+use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, Packet};
 
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
+use std::io::net::udp::UdpSocket;
 use std::time::duration::Duration;
 
 fn deserializer(message: &Vec<u8>) -> Option<String> {
@@ -18,6 +19,14 @@ fn serializer(packet: &String) -> Vec<u8> {
     packet.clone().into_bytes()
 }
 
+fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, SocketAddr, ConnectionConfig<String>, ClientConnectionConfig) {
+    let my_addr = SocketAddr{ ip: Ipv4Addr(0, 0, 0, 0), port: 0 };
+    let target_addr = SocketAddr{ ip: Ipv4Addr(127, 0, 0, 1), port: port };
+    let settings = ConnectionConfig::new(protocol_id, 10, deserializer, serializer);
+    let client_settings = ClientConnectionConfig::new(1, Duration::seconds(1));
+    (my_addr, target_addr, settings, client_settings)
+}
+
 /**
  * Test when there isn't a backend to connect to
  * Connect should return an IOResult stating we can't get there
@@ -25,10 +34,7 @@ fn serializer(packet: &String) -> Vec<u8> {
 #[test]
 fn connection_ignored() {
     let port = 65000;
-    let my_addr = SocketAddr{ ip: Ipv4Addr(0, 0, 0, 0), port: 0 };
-    let target_addr = SocketAddr{ ip: Ipv4Addr(127, 0, 0, 1), port: port };
-    let settings = ConnectionConfig::new(121, 10, deserializer, serializer);
-    let client_settings = ClientConnectionConfig::new(1, Duration::seconds(1));
+    let (my_addr, target_addr, settings, client_settings) = generate_settings(port, 121);
 
     match Client::connect(my_addr, target_addr, settings, client_settings) {
         Ok(_) => fail!("Reported connected when there is no server!"),
@@ -38,9 +44,37 @@ fn connection_ignored() {
     };
 }
 
+/**
+ * Test a normal connection where the backend replies with an accept
+ */
 #[test]
 fn standard_connection() {
-    unimplemented!();
+    
+    let port = 65001;
+    let (my_addr, target_addr, settings, client_settings) = generate_settings(port, 121);
+
+    spawn(proc() {
+        match UdpSocket::bind(SocketAddr{ ip: Ipv4Addr(127, 0, 0, 1), port: port }) {
+            Ok(ref mut socket) => {
+                let mut buf = [0, ..255];
+
+                socket.set_timeout(Some(10000));
+                let (_, src) = match socket.recv_from(buf) {
+                    Ok((amt, src)) => (amt, src),
+                    Err(e) => fail!("Socket didn't get a message")
+                };
+                socket.send_to(Packet::accept(121).serialize().unwrap()[], src);
+            },
+            Err(e) => fail!(e)
+        }
+    });
+
+    match Client::connect(my_addr, target_addr, settings, client_settings) {
+        Ok(client) => {
+            //Success!
+        },
+        Err(e) => fail!(e)
+    };
 }
 
 #[test]
