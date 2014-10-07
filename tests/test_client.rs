@@ -127,9 +127,34 @@ fn connection_rejected() {
 }
 
 
+/**
+ * We should be able to specify how many retries we want
+ */
 #[test]
-fn different_request_count() {
-    unimplemented!();
+fn different_retry_count() {
+    let port = 65004;
+    let (my_addr, target_addr, settings, mut client_settings) = generate_settings(port, 121);
+    client_settings.max_connect_retries = 3;
+
+
+    let (tx, rx) = channel();
+    with_bound_socket!(target_addr, (socket) {
+        socket.set_timeout(Some(10000));
+        let mut attempts = 0u8;
+        while attempts < 3 {
+            get_message(&mut socket);
+            attempts += 1;
+        }
+
+        tx.send(attempts);
+    });
+
+    match Client::connect(my_addr, target_addr, settings, client_settings) {
+        Ok(_) => (),
+        Err(e) => ()
+    };
+
+    assert!(rx.recv() == 3);
 }
 
 //TODO: Find a sensible way of testing timeout lengths
