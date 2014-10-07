@@ -1,7 +1,7 @@
 #![feature(macro_rules)]
 extern crate string_telephone;
 
-use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, Packet};
+use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, Packet, PollEmpty};
 
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::io::net::udp::UdpSocket;
@@ -136,7 +136,6 @@ fn different_retry_count() {
     let (my_addr, target_addr, settings, mut client_settings) = generate_settings(port, 121);
     client_settings.max_connect_retries = 3;
 
-
     let (tx, rx) = channel();
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(10000));
@@ -159,9 +158,26 @@ fn different_retry_count() {
 
 //TODO: Find a sensible way of testing timeout lengths
 
+/**
+ * We should instantly return when polling and there's no data available
+ */
 #[test]
 fn empty_polling() {
-    unimplemented!();
+    let port = 65005;
+    let (my_addr, target_addr, settings, mut client_settings) = generate_settings(port, 121);
+
+    with_bound_socket!(target_addr, (socket) {
+        socket.set_timeout(Some(1000));
+        let (_, src) = get_message(&mut socket);
+        socket.send_to(Packet::accept(121).serialize().unwrap()[], src);
+    });
+
+    match Client::connect(my_addr, target_addr, settings, client_settings) {
+        Ok(mut client) => {
+            assert!(match(client.poll()) { Err(PollEmpty) => true, _ => false});
+        },
+        Err(e) => fail!(e)
+    };
 }
 
 #[test]
