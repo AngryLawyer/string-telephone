@@ -1,31 +1,38 @@
+#![feature(macro_rules)]
 extern crate string_telephone;
-extern crate collections;
 
-use collections::str::{Slice, Owned};
 use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, Packet};
 
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::io::net::udp::UdpSocket;
 use std::time::duration::Duration;
 
-fn deserializer(message: &Vec<u8>) -> Option<String> {
-    match String::from_utf8_lossy(message.as_slice()) {
-        Slice(slice) => Some(slice.to_string()),
-        Owned(item) => Some(item)
-    }
+fn deserializer(message: &Vec<u8>) -> Option<Vec<u8>> {
+    Some(message.clone())
 }
 
-fn serializer(packet: &String) -> Vec<u8> {
-    packet.clone().into_bytes()
+fn serializer(packet: &Vec<u8>) -> Vec<u8> {
+    packet.clone()
 }
 
-fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, SocketAddr, ConnectionConfig<String>, ClientConnectionConfig) {
+fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, SocketAddr, ConnectionConfig<Vec<u8>>, ClientConnectionConfig) {
     let my_addr = SocketAddr{ ip: Ipv4Addr(0, 0, 0, 0), port: 0 };
     let target_addr = SocketAddr{ ip: Ipv4Addr(127, 0, 0, 1), port: port };
     let settings = ConnectionConfig::new(protocol_id, 10, deserializer, serializer);
     let client_settings = ClientConnectionConfig::new(1, Duration::seconds(1));
     (my_addr, target_addr, settings, client_settings)
 }
+
+macro_rules! with_bound_socket(
+    ($socket:ident, ($variable:ident)$code:block) => (
+        spawn(proc() {
+            match UdpSocket::bind($socket) {
+                Ok(mut $variable) => $code,
+                Err(e) => fail!(e)
+            }
+        });
+    )
+)
 
 /**
  * Test when there isn't a backend to connect to
@@ -53,20 +60,15 @@ fn standard_connection() {
     let port = 65001;
     let (my_addr, target_addr, settings, client_settings) = generate_settings(port, 121);
 
-    spawn(proc() {
-        match UdpSocket::bind(SocketAddr{ ip: Ipv4Addr(127, 0, 0, 1), port: port }) {
-            Ok(ref mut socket) => {
-                let mut buf = [0, ..255];
+    with_bound_socket!(target_addr, (socket) {
+        let mut buf = [0, ..255];
 
-                socket.set_timeout(Some(10000));
-                let (_, src) = match socket.recv_from(buf) {
-                    Ok((amt, src)) => (amt, src),
-                    Err(e) => fail!("Socket didn't get a message")
-                };
-                socket.send_to(Packet::accept(121).serialize().unwrap()[], src);
-            },
-            Err(e) => fail!(e)
-        }
+        socket.set_timeout(Some(10000));
+        let (_, src) = match socket.recv_from(buf) {
+            Ok((amt, src)) => (amt, src),
+            Err(e) => fail!("Socket didn't get a message")
+        };
+        socket.send_to(Packet::accept(121).serialize().unwrap()[], src);
     });
 
     match Client::connect(my_addr, target_addr, settings, client_settings) {
