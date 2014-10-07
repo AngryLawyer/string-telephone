@@ -202,7 +202,7 @@ impl <T> Client <T> {
                 let () = timeout.recv();
                 attempts += 1;
             } else {
-                fail!("What");
+                unreachable!();
             }
         }
 
