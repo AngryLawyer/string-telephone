@@ -15,6 +15,7 @@ pub enum ConnectionState {
     CommsConnected
 }
 
+#[deriving(Show)]
 pub enum PollFailResult {
     PollEmpty,
     PollDisconnected
