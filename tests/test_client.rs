@@ -180,13 +180,41 @@ fn empty_polling() {
     };
 }
 
+/**
+ * We should return an item if there's one there
+ */
 #[test]
 fn single_item_polling() {
-    unimplemented!();
+    let port = 65006;
+    let (my_addr, target_addr, settings, mut client_settings) = generate_settings(port, 121);
+
+    with_bound_socket!(target_addr, (socket) {
+        socket.set_timeout(Some(10000));
+        let (_, src) = get_message(&mut socket);
+        socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Failed to send accept packet");
+        socket.send_to(Packet::message(121, vec![1]).serialize().unwrap()[], src).ok().expect("Failed to send message packet");
+    });
+
+    match Client::connect(my_addr, target_addr, settings, client_settings) {
+        Ok(mut client) => {
+            match(client.poll()) { 
+                Ok(packet) => {
+                    assert!(packet == vec![1]);
+                },
+                Err(e) => fail!("Couldn't match a polled message! - {}", e)
+            };
+        },
+        Err(e) => fail!(e)
+    };
 }
 
 #[test]
 fn multiple_item_polling() {
+    unimplemented!();
+}
+
+#[test]
+fn ignore_bad_queue_items_polling() {
     unimplemented!();
 }
 
