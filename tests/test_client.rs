@@ -211,6 +211,9 @@ fn single_item_polling() {
     };
 }
 
+/**
+ * We should be able to pump multiple items
+ */
 #[test]
 fn multiple_item_polling() {
     let port = 65007;
@@ -239,7 +242,7 @@ fn multiple_item_polling() {
                 };
             }
         },
-        Err(e) => fail!(e)
+        Err(e) => fail!("{}", e)
     };
 
     assert!(packets.len() == 3);
@@ -248,27 +251,105 @@ fn multiple_item_polling() {
     assert!(packets[2] == vec![3]);
 }
 
+/**
+ * Messages not intended for us shouldn't be forwarded to us
+ */
 #[test]
 fn ignore_bad_queue_items_polling() {
-    unimplemented!();
+    let port = 65008;
+    let (my_addr, target_addr, settings, client_settings) = generate_settings(port, 121);
+
+    with_bound_socket!(target_addr, (socket) {
+        socket.set_timeout(Some(10000));
+        let (_, src) = get_message(&mut socket);
+        socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
+        socket.send_to(Packet::message(121, vec![1]).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
+        socket.send_to(Packet::message(122, vec![2]).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
+        socket.send_to(Packet::message(121, vec![3]).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
+    });
+
+    let mut packets: Vec<Vec<u8>> = vec![];
+
+    match Client::connect(my_addr, target_addr, settings, client_settings) {
+        Ok(ref mut client) => {
+            //FIXME: There must be a better way of doing this
+            Timer::new().unwrap().sleep(Duration::seconds(1));
+            loop {
+                match client.poll() { 
+                    Ok(packet) => packets.push(packet),
+                    Err(PollEmpty) => break,
+                    Err(e) => fail!("Unexpected failure - {}", e)
+                };
+            }
+        },
+        Err(e) => fail!("{}", e)
+    };
+
+    assert!(packets.len() == 2);
+    assert!(packets[0] == vec![1]);
+    assert!(packets[1] == vec![3]);
 }
 
+/**
+ * If the other end tells us to hang up, we better listen
+ */
 #[test]
 fn disconnection() {
-    unimplemented!();
+    let port = 65008;
+    let (my_addr, target_addr, settings, client_settings) = generate_settings(port, 121);
+
+    with_bound_socket!(target_addr, (socket) {
+        socket.set_timeout(Some(10000));
+        let (_, src) = get_message(&mut socket);
+        socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
+        socket.send_to(Packet::disconnect(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
+    });
+
+    let mut packets: Vec<Vec<u8>> = vec![];
+
+    match Client::connect(my_addr, target_addr, settings, client_settings) {
+        Ok(ref mut client) => {
+            //FIXME: There must be a better way of doing this
+            Timer::new().unwrap().sleep(Duration::seconds(1));
+            loop {
+                match client.poll() { 
+                    Err(Disconnected) => break,
+                    _ => fail!("Unexpected failure")
+                };
+            }
+        },
+        Err(e) => fail!("{}", e)
+    };
 }
 
+/**
+ * If the remote end doesn't reply in time, we should time out and disconnect
+ */
 #[test]
 fn timeout() {
     unimplemented!();
 }
 
+/**
+ * When trying to connect, we should send a connect request message
+ */
 #[test]
 fn send_correct_handshake() {
     unimplemented!();
 }
 
+/**
+ * We should be able to send data that can be read by the server
+ */
 #[test]
 fn send_data() {
+    unimplemented!();
+}
+
+/**
+ * We should be able to tell the server when we're done
+ */
+#[test]
+fn client_disconnect() {
     unimplemented!();
 }
