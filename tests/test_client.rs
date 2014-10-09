@@ -305,8 +305,6 @@ fn disconnection() {
         socket.send_to(Packet::disconnect(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
     });
 
-    let mut packets: Vec<Vec<u8>> = vec![];
-
     match Client::connect(my_addr, target_addr, settings, client_settings) {
         Ok(ref mut client) => {
             //FIXME: There must be a better way of doing this
@@ -327,7 +325,29 @@ fn disconnection() {
  */
 #[test]
 fn timeout() {
-    unimplemented!();
+    let port = 65009;
+    let (my_addr, target_addr, settings, client_settings) = generate_settings(port, 121);
+
+    with_bound_socket!(target_addr, (socket) {
+        socket.set_timeout(Some(10000));
+        let (_, src) = get_message(&mut socket);
+        socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
+        //Don't send any more data
+    });
+
+    match Client::connect(my_addr, target_addr, settings, client_settings) {
+        Ok(ref mut client) => {
+            //FIXME: There must be a better way of doing this
+            Timer::new().unwrap().sleep(Duration::seconds(1));
+            loop {
+                match client.poll() { 
+                    Err(Disconnected) => break,
+                    _ => fail!("Unexpected failure")
+                };
+            }
+        },
+        Err(e) => fail!("{}", e)
+    };
 }
 
 /**
