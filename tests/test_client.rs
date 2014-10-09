@@ -20,7 +20,7 @@ fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, SocketAddr, Co
     let my_addr = SocketAddr{ ip: Ipv4Addr(0, 0, 0, 0), port: 0 };
     let target_addr = SocketAddr{ ip: Ipv4Addr(127, 0, 0, 1), port: port };
     let settings = ConnectionConfig::new(protocol_id, 10, deserializer, serializer);
-    let client_settings = ClientConnectionConfig::new(1, Duration::seconds(1));
+    let client_settings = ClientConnectionConfig::new(3, Duration::seconds(2));
     (my_addr, target_addr, settings, client_settings)
 }
 
@@ -134,7 +134,8 @@ fn connection_rejected() {
 fn different_retry_count() {
     let port = 65004;
     let (my_addr, target_addr, settings, mut client_settings) = generate_settings(port, 121);
-    client_settings.max_connect_retries = 3;
+    client_settings.max_connect_retries = 6;
+    client_settings.connect_attempt_timeout = Duration::milliseconds(100);
 
     let (tx, rx) = channel();
     with_bound_socket!(target_addr, (socket) {
