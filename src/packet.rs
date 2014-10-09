@@ -2,7 +2,7 @@ use std::io::{IoResult, IoError, OtherIoError};
 use std::io::{BufReader, MemWriter};
 
 ///Headers for various different built-in message types
-#[deriving(FromPrimitive, Clone)]
+#[deriving(FromPrimitive, Clone, Show)]
 pub enum PacketType {
     PacketConnect = 0,
     PacketAccept,
