@@ -34,8 +34,15 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Ta
                     match Packet::deserialize(buf.slice_to(amt)) {
                         Ok(packet) => {
                             if packet.protocol_id == protocol_id {
-                                send.send(packet);
-                                expires = now().to_timespec().sec + timeout_period as i64;
+                                match send.send_opt(packet) {
+                                    Ok(()) => {
+                                        expires = now().to_timespec().sec + timeout_period as i64;
+                                    },
+                                    Err(_) => {
+                                        //Other end hung up, we should give up
+                                        break;
+                                    }
+                                }
                             }
                         },
                         Err(_) => ()
@@ -62,7 +69,10 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Ta
             }
         };
         if now().to_timespec().sec > expires {
-            send.send(Packet::disconnect(protocol_id))
+            //FIXME: Need a nicer way of ignoring failure for this
+            match send.send_opt(Packet::disconnect(protocol_id)) {
+                _ => break
+            }
         }
     }
 }

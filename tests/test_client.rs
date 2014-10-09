@@ -151,7 +151,7 @@ fn different_retry_count() {
 
     match Client::connect(my_addr, target_addr, settings, client_settings) {
         Ok(_) => (),
-        Err(e) => ()
+        Err(_) => ()
     };
 
     assert!(rx.recv() == 3);
@@ -165,7 +165,7 @@ fn different_retry_count() {
 #[test]
 fn empty_polling() {
     let port = 65005;
-    let (my_addr, target_addr, settings, mut client_settings) = generate_settings(port, 121);
+    let (my_addr, target_addr, settings, client_settings) = generate_settings(port, 121);
 
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(1000));
@@ -175,7 +175,7 @@ fn empty_polling() {
 
     match Client::connect(my_addr, target_addr, settings, client_settings) {
         Ok(ref mut client) => {
-            assert!(match(client.poll()) { Err(PollEmpty) => true, _ => false});
+            assert!(match client.poll() { Err(PollEmpty) => true, _ => false});
         },
         Err(e) => fail!(e)
     };
@@ -187,13 +187,13 @@ fn empty_polling() {
 #[test]
 fn single_item_polling() {
     let port = 65006;
-    let (my_addr, target_addr, settings, mut client_settings) = generate_settings(port, 121);
+    let (my_addr, target_addr, settings, client_settings) = generate_settings(port, 121);
 
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(10000));
         let (_, src) = get_message(&mut socket);
-        socket.send_to(Packet::accept(121).serialize().unwrap()[], src);
-        socket.send_to(Packet::message(121, vec![1]).serialize().unwrap()[], src);
+        socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
+        socket.send_to(Packet::message(121, vec![1]).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
     });
 
     match Client::connect(my_addr, target_addr, settings, client_settings) {
@@ -201,7 +201,7 @@ fn single_item_polling() {
             //May have to wait a bit
             //FIXME: There must be a better way of doing this
             Timer::new().unwrap().sleep(Duration::seconds(1));
-            match(client.poll()) { 
+            match client.poll() { 
                 Ok(packet) => {
                     assert!(packet == vec![1]);
                 },
