@@ -1,7 +1,7 @@
 #![feature(macro_rules)]
 extern crate string_telephone;
 
-use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, Packet, PollEmpty};
+use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, Packet, PollEmpty, PacketConnect};
 
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::io::net::udp::UdpSocket;
@@ -356,7 +356,29 @@ fn timeout() {
  */
 #[test]
 fn send_correct_handshake() {
-    unimplemented!();
+    let port = 65010;
+    let (my_addr, target_addr, settings, client_settings) = generate_settings(port, 121);
+
+    let (tx, rx) = channel();
+
+    with_bound_socket!(target_addr, (socket) {
+        socket.set_timeout(Some(10000));
+        let (msg, src) = get_message(&mut socket);
+        //Check what's been sent
+        let packet = Packet::deserialize(msg[]);
+        socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
+        tx.send(packet);
+    });
+
+    match Client::connect(my_addr, target_addr, settings, client_settings) {
+        Ok(_) => (),
+        Err(_) => ()
+    };
+
+    let packet = rx.recv().unwrap();
+    assert!(packet.protocol_id == 121);
+    assert!(packet.packet_type == PacketConnect);
+    assert!(packet.packet_content.is_none())
 }
 
 /**
