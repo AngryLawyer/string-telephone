@@ -77,7 +77,7 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Ta
     }
 }
 
-fn writer_process(mut writer: UdpSocket, _send: Sender<TaskCommand>, recv: Receiver<Packet>, target_addr: SocketAddr) {
+fn writer_process(mut writer: UdpSocket, recv: Receiver<Packet>, target_addr: SocketAddr) {
     for msg in recv.iter() {
         match msg.serialize() {
             Ok(msg) => {
@@ -99,7 +99,7 @@ pub struct Client <T> {
     pub target_addr: SocketAddr,
     pub config: ConnectionConfig<T>,
 
-    connection_state: ConnectionState,
+    pub connection_state: ConnectionState,
 
     reader_send: Sender<TaskCommand>,
     reader_receive: Receiver<Packet>,
@@ -145,10 +145,10 @@ impl <T> Client <T> {
                 });
 
                 let (writer_send, writer_task_receive) = channel();
-                let (writer_task_send, writer_receive) = channel();
+                let (_, writer_receive) = channel();
 
                 spawn(proc() {
-                    writer_process(writer, writer_task_send, writer_task_receive, target_addr);
+                    writer_process(writer, writer_task_receive, target_addr);
                 });
 
                 let mut client = Client {
@@ -279,5 +279,6 @@ impl<T> Drop for Client<T> {
 
     fn drop(&mut self) {
         self.reader_send.send(Disconnect);
+        self.writer_send.send(Packet::disconnect(self.config.protocol_id));
     }
 }
