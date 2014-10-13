@@ -1,7 +1,7 @@
 #![feature(macro_rules)]
 extern crate string_telephone;
 
-use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, Packet, PollEmpty, PacketConnect};
+use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, Packet, PollEmpty, PacketConnect, PacketMessage};
 
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::io::net::udp::UdpSocket;
@@ -386,7 +386,32 @@ fn send_correct_handshake() {
  */
 #[test]
 fn send_data() {
-    unimplemented!();
+    let port = 65011;
+    let (my_addr, target_addr, settings, client_settings) = generate_settings(port, 121);
+
+    let (tx, rx) = channel();
+
+    with_bound_socket!(target_addr, (socket) {
+        socket.set_timeout(Some(10000));
+        let (_, src) = get_message(&mut socket);
+        socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
+        //Check what's been sent
+        let (msg, src) = get_message(&mut socket);
+        let packet = Packet::deserialize(msg[]);
+        tx.send(packet);
+    });
+
+    match Client::connect(my_addr, target_addr, settings, client_settings) {
+        Ok(ref mut socket) => {
+            socket.send(&vec![1, 2, 3]);
+        },
+        Err(_) => ()
+    };
+
+    let packet = rx.recv().unwrap();
+    assert!(packet.protocol_id == 121);
+    assert!(packet.packet_type == PacketMessage);
+    assert!(packet.packet_content.unwrap() == vec![1, 2, 3])
 }
 
 /**
