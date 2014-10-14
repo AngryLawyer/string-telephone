@@ -267,7 +267,9 @@ impl <T> Client <T> {
      * Send a packet to the server
      */
     pub fn send(&mut self, packet: &T) {
-        self.writer_send.send(Packet::message(self.config.protocol_id, (self.config.packet_serializer)(packet)));
+        match self.writer_send.send_opt(Packet::message(self.config.protocol_id, (self.config.packet_serializer)(packet))) {
+            _ => () //FIXME: We shouldn't discard errors here
+        }
     }
 }
 
@@ -275,7 +277,8 @@ impl <T> Client <T> {
 impl<T> Drop for Client<T> {
 
     fn drop(&mut self) {
-        self.reader_send.send(Disconnect);
-        self.writer_send.send(Packet::disconnect(self.config.protocol_id));
+        match (self.reader_send.send_opt(Disconnect),  self.writer_send.send_opt(Packet::disconnect(self.config.protocol_id))) {
+            _ => () //FIXME: This is a bad way of discarding errors
+        }
     }
 }
