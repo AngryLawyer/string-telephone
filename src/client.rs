@@ -21,11 +21,11 @@ pub enum PollFailResult {
     PollDisconnected
 }
 
-fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<TaskCommand>, target_addr: SocketAddr, protocol_id: u32, timeout_period: u32) {
+fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<TaskCommand>, target_addr: SocketAddr, protocol_id: u32, timeout_period: Duration) {
     let mut buf = [0, ..1023];
     reader.set_timeout(Some(1000));
 
-    let mut expires = now().to_timespec().sec + timeout_period as i64;
+    let mut expires = now().to_timespec().sec + timeout_period.num_seconds();
 
     loop {
         match reader.recv_from(buf) {
@@ -36,7 +36,7 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Ta
                             if packet.protocol_id == protocol_id {
                                 match send.send_opt(packet) {
                                     Ok(()) => {
-                                        expires = now().to_timespec().sec + timeout_period as i64;
+                                        expires = now().to_timespec().sec + timeout_period.num_seconds();
                                     },
                                     Err(_) => {
                                         //Other end hung up, we should give up

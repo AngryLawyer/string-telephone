@@ -1,13 +1,14 @@
 extern crate collections;
 extern crate string_telephone;
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
+use std::time::duration::Duration;
 
 use string_telephone::{ConnectionConfig, Server, UserPacket};
 
 mod demo_shared;
 
 fn main () {
-    let settings = ConnectionConfig::new(121, 10, demo_shared::deserializer, demo_shared::serializer);
+    let settings = ConnectionConfig::new(121, Duration::seconds(10), demo_shared::deserializer, demo_shared::serializer);
 
     match Server::new(SocketAddr {ip: Ipv4Addr(0, 0, 0, 0), port: 6666}, settings) {
         Ok(ref mut server) => {

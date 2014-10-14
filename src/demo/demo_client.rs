@@ -9,10 +9,9 @@ use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, PollDis
 
 mod demo_shared;
 
-
 fn main () {
 
-    let settings = ConnectionConfig::new(121, 10, demo_shared::deserializer, demo_shared::serializer);
+    let settings = ConnectionConfig::new(121, Duration::seconds(10), demo_shared::deserializer, demo_shared::serializer);
     let client_settings = ClientConnectionConfig::new(3, Duration::seconds(5));
 
     match Client::connect(SocketAddr {ip: Ipv4Addr(0, 0, 0, 0), port: 0}, SocketAddr {ip: Ipv4Addr(127, 0, 0, 1), port: 6666}, settings, client_settings) {

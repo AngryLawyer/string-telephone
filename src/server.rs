@@ -144,7 +144,7 @@ impl <T> Server <T> {
                     //Handle any new connections
                     match packet.packet_type {
                         PacketConnect => {
-                            self.connections.insert(hash_sender(&src), ClientInstance::new(src, now().to_timespec().sec + self.config.timeout_period as i64));
+                            self.connections.insert(hash_sender(&src), ClientInstance::new(src, now().to_timespec().sec + self.config.timeout_period.num_seconds()));
                             self.writer_send.send((Packet::accept(self.config.protocol_id), src));
                             out = Some((Command(PacketConnect), src));
                             break
@@ -165,7 +165,7 @@ impl <T> Server <T> {
                                         Some(deserialized) => {
                                             out = Some((UserPacket(deserialized), src));
                                             //Update our timeout
-                                            comms.timeout = now().to_timespec().sec + self.config.timeout_period as i64;
+                                            comms.timeout = now().to_timespec().sec + self.config.timeout_period.num_seconds();
                                             break
                                         },
                                         _ => ()
