@@ -9,12 +9,18 @@ use shared::ConnectionConfig;
 use time::now;
 
 
+/**
+ * The current state of a connection
+ */
 pub enum ConnectionState {
     CommsDisconnected,
     CommsConnecting,
     CommsConnected
 }
 
+/**
+ * A Poll attempt failed for some reason
+ */
 #[deriving(Show)]
 pub enum PollFailResult {
     PollEmpty,
@@ -95,10 +101,14 @@ fn writer_process(mut writer: UdpSocket, recv: Receiver<Packet>, target_addr: So
  * Clientside implementation of UDP networking
  */
 pub struct Client <T> {
+    ///The socket we should use locally
     pub addr: SocketAddr,
+    ///The socket of the server we intent to connect to
     pub target_addr: SocketAddr,
+    ///Basic configuration for connecting
     pub config: ConnectionConfig<T>,
 
+    ///What's the current state of our connection
     pub connection_state: ConnectionState,
 
     reader_send: Sender<TaskCommand>,
@@ -110,12 +120,17 @@ pub struct Client <T> {
  * Additional configuration options for a Client connection
  */
 pub struct ClientConnectionConfig {
+    ///How many times should we ask for a connection before giving up?
     pub max_connect_retries: uint,
+    ///How long should each connection request await an answer?
     pub connect_attempt_timeout: Duration
 }
 
 impl ClientConnectionConfig {
 
+    /**
+     * Create a new ClientConnectionConfig object
+     */
     pub fn new(max_connect_retries: uint, connect_attempt_timeout: Duration) -> ClientConnectionConfig {
         ClientConnectionConfig {
             max_connect_retries: max_connect_retries,
@@ -126,7 +141,8 @@ impl ClientConnectionConfig {
 
 impl <T> Client <T> {
     /**
-     * Connect our Client to a target Server
+     * Connect our Client to a target Server.
+     * Will block until either a valid connection is made, or we give up
      */
     pub fn connect(addr: SocketAddr, target_addr: SocketAddr, config: ConnectionConfig<T>, client_connection_config: ClientConnectionConfig) -> IoResult<Client<T>> {
          match UdpSocket::bind(addr) {
