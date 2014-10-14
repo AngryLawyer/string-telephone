@@ -1,7 +1,7 @@
 #![feature(macro_rules)]
 extern crate string_telephone;
 
-use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, Packet, PollEmpty, PacketConnect, PacketMessage, PacketDisconnect};
+use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, Packet, PollEmpty, PacketConnect, PacketMessage, PacketDisconnect, PollDisconnected};
 
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::io::net::udp::UdpSocket;
@@ -27,8 +27,8 @@ fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, SocketAddr, Co
 fn get_message(socket: &mut UdpSocket) -> (Vec<u8>, SocketAddr) {
     let mut buf = [0, ..255];
     match socket.recv_from(buf) {
-        Ok((amt, src)) => (buf.slice_to(amt).to_owned(), src),
-        Err(e) => fail!("Socket didn't get a message")
+        Ok((amt, src)) => (buf.slice_to(amt).to_vec(), src),
+        Err(e) => fail!("Socket didn't get a message - {}", e)
     }
 }
 
@@ -71,11 +71,11 @@ fn standard_connection() {
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(1000));
         let (_, src) = get_message(&mut socket);
-        socket.send_to(Packet::accept(121).serialize().unwrap()[], src);
+        socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Failed to send accept packet");
     });
 
     match Client::connect(my_addr, target_addr, settings, client_settings) {
-        Ok(client) => {
+        Ok(_) => {
             //Success!
         },
         Err(e) => fail!(e)
@@ -93,7 +93,7 @@ fn connection_different_protocol_id() {
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(1000));
         let (_, src) = get_message(&mut socket);
-        socket.send_to(Packet::accept(122).serialize().unwrap()[], src);
+        socket.send_to(Packet::accept(122).serialize().unwrap()[], src).ok().expect("Failed to send accept packet");
     });
 
     match Client::connect(my_addr, target_addr, settings, client_settings) {
@@ -115,7 +115,7 @@ fn connection_rejected() {
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(1000));
         let (_, src) = get_message(&mut socket);
-        socket.send_to(Packet::reject(121).serialize().unwrap()[], src);
+        socket.send_to(Packet::reject(121).serialize().unwrap()[], src).ok().expect("Failed to send reject packet");
     });
 
     match Client::connect(my_addr, target_addr, settings, client_settings) {
@@ -170,7 +170,7 @@ fn empty_polling() {
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(1000));
         let (_, src) = get_message(&mut socket);
-        socket.send_to(Packet::accept(121).serialize().unwrap()[], src);
+        socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Failed to send accept packet");
     });
 
     match Client::connect(my_addr, target_addr, settings, client_settings) {
@@ -312,7 +312,7 @@ fn disconnection() {
             Timer::new().unwrap().sleep(Duration::seconds(1));
             loop {
                 match client.poll() { 
-                    Err(Disconnected) => break,
+                    Err(PollDisconnected) => break,
                     _ => fail!("Unexpected failure")
                 };
             }
@@ -342,8 +342,9 @@ fn timeout() {
             Timer::new().unwrap().sleep(Duration::seconds(1));
             loop {
                 match client.poll() { 
-                    Err(Disconnected) => break,
-                    _ => fail!("Unexpected failure")
+                    Err(PollDisconnected) => break,
+                    Err(PollEmpty) => (),
+                    _ => fail!("Unexpected result")
                 };
             }
         },
@@ -396,7 +397,7 @@ fn send_data() {
         let (_, src) = get_message(&mut socket);
         socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
         //Check what's been sent
-        let (msg, src) = get_message(&mut socket);
+        let (msg, _) = get_message(&mut socket);
         let packet = Packet::deserialize(msg[]);
         tx.send(packet);
     });
@@ -429,7 +430,7 @@ fn client_disconnect() {
         let (_, src) = get_message(&mut socket);
         socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
         //Check what's been sent
-        let (msg, src) = get_message(&mut socket);
+        let (msg, _) = get_message(&mut socket);
         let packet = Packet::deserialize(msg[]);
         tx.send(packet);
     });

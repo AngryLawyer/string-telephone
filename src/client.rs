@@ -104,7 +104,6 @@ pub struct Client <T> {
     reader_send: Sender<TaskCommand>,
     reader_receive: Receiver<Packet>,
     writer_send: Sender<Packet>,
-    writer_receive: Receiver<TaskCommand>,
 }
 
 /**
@@ -145,7 +144,6 @@ impl <T> Client <T> {
                 });
 
                 let (writer_send, writer_task_receive) = channel();
-                let (_, writer_receive) = channel();
 
                 spawn(proc() {
                     writer_process(writer, writer_task_receive, target_addr);
@@ -157,7 +155,6 @@ impl <T> Client <T> {
                     reader_send: reader_send,
                     reader_receive: reader_receive,
                     writer_send: writer_send,
-                    writer_receive: writer_receive,
                     connection_state: CommsDisconnected,
                     config: config
                 };
