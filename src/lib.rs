@@ -1,3 +1,8 @@
+//!
+//! # String Telephone
+//!
+//! Simple abstractions for networking for video games
+//!
 #![feature(unsafe_destructor)]
 #![feature(globs)]
 #![crate_name = "string_telephone"]
