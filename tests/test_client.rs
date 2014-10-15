@@ -8,18 +8,12 @@ use std::io::net::udp::UdpSocket;
 use std::io::Timer;
 use std::time::duration::Duration;
 
-fn deserializer(message: &Vec<u8>) -> Option<Vec<u8>> {
-    Some(message.clone())
-}
-
-fn serializer(packet: &Vec<u8>) -> Vec<u8> {
-    packet.clone()
-}
+mod test_shared;
 
 fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, SocketAddr, ConnectionConfig<Vec<u8>>, ClientConnectionConfig) {
     let my_addr = SocketAddr{ ip: Ipv4Addr(0, 0, 0, 0), port: 0 };
     let target_addr = SocketAddr{ ip: Ipv4Addr(127, 0, 0, 1), port: port };
-    let settings = ConnectionConfig::new(protocol_id, Duration::seconds(10), deserializer, serializer);
+    let settings = ConnectionConfig::new(protocol_id, Duration::seconds(10), test_shared::deserializer, test_shared::serializer);
     let client_settings = ClientConnectionConfig::new(3, Duration::seconds(2));
     (my_addr, target_addr, settings, client_settings)
 }
