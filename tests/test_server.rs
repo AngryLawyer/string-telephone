@@ -21,7 +21,7 @@ fn create_server() {
     let socket = 64000;
     let (my_addr, settings) = generate_settings(socket, 121);
     match Server::new(my_addr, settings) {
-        Ok(server) => (), //passed
+        Ok(_) => (), //passed
         Err(t) => fail!("Failed to create a server - {}", t)
     };
 }
@@ -31,7 +31,14 @@ fn create_server() {
  */
 #[test]
 fn empty_poll() {
-    unimplemented!()
+    let socket = 64001;
+    let (my_addr, settings) = generate_settings(socket, 121);
+    match Server::new(my_addr, settings) {
+        Ok(ref mut server) => {
+            assert!(server.poll().is_none())
+        },
+        Err(t) => fail!("Failed to create a server - {}", t)
+    };
 }
 
 /**
