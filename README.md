@@ -5,3 +5,5 @@ string-telephone
 
 Experimental UDP (and eventually TCP) networking abstraction for games in Rust.
 The API won't be settled for a while, so use at your own risk!
+
+[Documentation](http://angrylawyer.github.io/string-telephone/string_telephone/)
