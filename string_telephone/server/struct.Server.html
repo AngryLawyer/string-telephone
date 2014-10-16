@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Server` struct in crate `string_telephone`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Server">
+
+    <title>string_telephone::server::Server - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <section class="sidebar">
+        
+        <p class='location'><a href='../index.html'>string_telephone</a>::<wbr><a href='index.html'>server</a></p><div class='block struct'><h2>Structs</h2><a class='struct current' href='struct.Server.html'>Server</a></div><div class='block enum'><h2>Enums</h2><a class='enum ' href='enum.PacketOrCommand.html'>PacketOrCommand</a></div>
+    </section>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press 'S' to search, '?' for more options..."
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='../index.html'>string_telephone</a>::<wbr><a href='index.html'>server</a>::<wbr><a class='struct' href=''>Server</a><wbr></span><span class='out-of-band'><span id='render-detail'>
+            <a id="collapse-all" href="#">[-]
+            </a>&nbsp;<a id="expand-all" href="#">[+]</a>
+        </span><a id='src-2443' href='../../src/string_telephone/src/server.rs.html#92-102'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Server&lt;T&gt; {
+    pub addr: <a class='struct' href='http://doc.rust-lang.org/nightly/std/io/net/ip/struct.SocketAddr.html' title='std::io::net::ip::SocketAddr'>SocketAddr</a>,
+    pub config: <a class='struct' href='../../string_telephone/shared/struct.ConnectionConfig.html' title='string_telephone::shared::ConnectionConfig'>ConnectionConfig</a>&lt;T&gt;,
+    // some fields omitted
+}</pre><h2 class='fields'>Fields</h2>
+<table><tr><td id='structfield.addr'><a class='stability Unmarked' title='No stability level'></a><code>addr</code></td><td></td></tr><tr><td id='structfield.config'><a class='stability Unmarked' title='No stability level'></a><code>config</code></td><td></td></tr></table><h2 id='methods'>Methods</h2><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;T&gt; <a class='struct' href='../../string_telephone/server/struct.Server.html' title='string_telephone::server::Server'>Server</a>&lt;T&gt;</code></h3><div class='impl-methods'><h4 id='method.new' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.new' class='fnname'>new</a>(addr: <a class='struct' href='http://doc.rust-lang.org/nightly/std/io/net/ip/struct.SocketAddr.html' title='std::io::net::ip::SocketAddr'>SocketAddr</a>, config: <a class='struct' href='../../string_telephone/shared/struct.ConnectionConfig.html' title='string_telephone::shared::ConnectionConfig'>ConnectionConfig</a>&lt;T&gt;) -&gt; <a class='type' href='http://doc.rust-lang.org/nightly/std/io/type.IoResult.html' title='std::io::IoResult'>IoResult</a>&lt;<a class='struct' href='../../string_telephone/server/struct.Server.html' title='string_telephone::server::Server'>Server</a>&lt;T&gt;&gt;</code></h4>
+<h4 id='method.poll' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.poll' class='fnname'>poll</a>(&amp;mut self) -&gt; <a class='enum' href='http://doc.rust-lang.org/nightly/core/option/enum.Option.html' title='core::option::Option'>Option</a>&lt;<a href='http://doc.rust-lang.org/nightly/std/primitive.tuple.html'>(<a class='enum' href='../../string_telephone/server/enum.PacketOrCommand.html' title='string_telephone::server::PacketOrCommand'>PacketOrCommand</a>&lt;T&gt;, <a class='struct' href='http://doc.rust-lang.org/nightly/std/io/net/ip/struct.SocketAddr.html' title='std::io::net::ip::SocketAddr'>SocketAddr</a>)</a>&gt;</code></h4>
+<h4 id='method.cull' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.cull' class='fnname'>cull</a>(&amp;mut self) -&gt; <a class='struct' href='http://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a class='struct' href='http://doc.rust-lang.org/nightly/std/io/net/ip/struct.SocketAddr.html' title='std::io::net::ip::SocketAddr'>SocketAddr</a>&gt;</code></h4>
+<h4 id='method.send_to' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.send_to' class='fnname'>send_to</a>(&amp;mut self, packet: &amp;T, addr: &amp;<a class='struct' href='http://doc.rust-lang.org/nightly/std/io/net/ip/struct.SocketAddr.html' title='std::io::net::ip::SocketAddr'>SocketAddr</a>)</code></h4>
+<h4 id='method.send_to_many' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.send_to_many' class='fnname'>send_to_many</a>(&amp;mut self, packet: &amp;T, addrs: &amp;<a class='struct' href='http://doc.rust-lang.org/nightly/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a class='struct' href='http://doc.rust-lang.org/nightly/std/io/net/ip/struct.SocketAddr.html' title='std::io::net::ip::SocketAddr'>SocketAddr</a>&gt;)</code></h4>
+<h4 id='method.send_to_all' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.send_to_all' class='fnname'>send_to_all</a>(&amp;mut self, packet: &amp;T)</code></h4>
+</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;T&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Drop.html' title='core::ops::Drop'>Drop</a> for <a class='struct' href='../../string_telephone/server/struct.Server.html' title='string_telephone::server::Server'>Server</a>&lt;T&gt;</code></h3><div class='impl-methods'><h4 id='method.drop' class='method'><a class='stability Experimental' title='Experimental'></a><code>fn <a href='#method.drop' class='fnname'>drop</a>(&amp;mut self)</code></h4>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <div id="help" class="hidden">
+        <div class="shortcuts">
+            <h1>Keyboard shortcuts</h1>
+            <dl>
+                <dt>?</dt>
+                <dd>Show this help dialog</dd>
+                <dt>S</dt>
+                <dd>Focus the search field</dd>
+                <dt>&larrb;</dt>
+                <dd>Move up in search results</dd>
+                <dt>&rarrb;</dt>
+                <dd>Move down in search results</dd>
+                <dt>&#9166;</dt>
+                <dd>Go to active search result</dd>
+            </dl>
+        </div>
+        <div class="infos">
+            <h1>Search tricks</h1>
+            <p>
+                Prefix searches with a type followed by a colon (e.g.
+                <code>fn:</code>) to restrict the search to a given type.
+            </p>
+            <p>
+                Accepted types are: <code>fn</code>, <code>mod</code>,
+                <code>struct</code>, <code>enum</code>,
+                <code>trait</code>, <code>typedef</code> (or
+                <code>tdef</code>).
+            </p>
+        </div>
+    </div>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "string_telephone";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    
+    <script async src="../../search-index.js"></script>
+</body>
+</html>
