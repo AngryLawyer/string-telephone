@@ -222,6 +222,13 @@ impl <T> Server <T> {
             self.send_to(packet, &addr.addr)
         }
     }
+
+    /**
+     * List all of our current connections
+     */
+    pub fn all_connections(&self) -> Vec<SocketAddr> {
+        self.connections.values().map(|client_instance| { client_instance.addr }).collect()
+    }
 }
 
 #[unsafe_destructor]

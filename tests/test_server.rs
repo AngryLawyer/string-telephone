@@ -1,11 +1,23 @@
 #![feature(macro_rules)]
 extern crate string_telephone;
 
-use string_telephone::{ConnectionConfig, ClientConnectionConfig, Server, Packet, PollEmpty, PacketConnect, PacketMessage, PacketDisconnect, PollDisconnected};
+use string_telephone::{ConnectionConfig, ClientConnectionConfig, Server, Packet, PollEmpty, PacketConnect, PacketMessage, PacketDisconnect, PollDisconnected, Command};
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::time::duration::Duration;
+use std::io::net::udp::UdpSocket;
 
 mod test_shared;
+
+macro_rules! with_bound_socket(
+    (($variable:ident)$code:block) => (
+        spawn(proc() {
+            match UdpSocket::bind(SocketAddr{ ip: Ipv4Addr(0, 0, 0, 0), port: 0 }) {
+                Ok(mut $variable) => $code,
+                Err(e) => fail!(e)
+            }
+        });
+    )
+)
 
 fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, ConnectionConfig<Vec<u8>>) {
     let my_addr = SocketAddr{ ip: Ipv4Addr(127, 0, 0, 1), port: port };
@@ -46,7 +58,48 @@ fn empty_poll() {
  */
 #[test]
 fn bad_client_attempt() {
-    unimplemented!()
+    let socket = 64002;
+    let (my_addr, settings) = generate_settings(socket, 121);
+    let (tx, rx) = channel();
+
+    match Server::new(my_addr, settings) {
+        Ok(ref mut server) => {
+            with_bound_socket!((socket) {
+                socket.send_to(Packet::connect(122).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                tx.send(());
+            });
+            rx.recv();
+            assert!(server.poll().is_none())
+            assert!(server.all_connections().len() == 0);
+        },
+        Err(t) => fail!("Failed to create a server - {}", t)
+    };
+}
+
+/**
+ * Test we can take a single client
+ */
+#[test]
+fn single_client() {
+    let socket = 64003;
+    let (my_addr, settings) = generate_settings(socket, 121);
+    let (tx, rx) = channel();
+
+    match Server::new(my_addr, settings) {
+        Ok(ref mut server) => {
+            with_bound_socket!((socket) {
+                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                tx.send(());
+            });
+            rx.recv();
+            match server.poll() {
+                Some((Command(PacketConnect), _))=> (),
+                _ => fail!("Unexpected poll result")
+            }
+            assert!(server.all_connections().len() == 1);
+        },
+        Err(t) => fail!("Failed to create a server - {}", t)
+    };
 }
 
 /**
