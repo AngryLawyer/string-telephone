@@ -203,23 +203,26 @@ impl <T> Server <T> {
         culled
     }
 
-    pub fn send_to(&mut self, packet: &T, addr: &SocketAddr) {
+    pub fn send_to(&mut self, packet: &T, addr: &SocketAddr) -> bool {
         let hashed = hash_sender(addr);
         match self.connections.find(&hashed) {
-            Some(_) => self.writer_send.send((Packet::message(self.config.protocol_id, (self.config.packet_serializer)(packet)), addr.clone())),
-            None => (),
+            Some(_) => {
+                self.writer_send.send((Packet::message(self.config.protocol_id, (self.config.packet_serializer)(packet)), addr.clone()));
+                true
+            },
+            None => false
         }
     }
 
     pub fn send_to_many(&mut self, packet: &T, addrs: &Vec<SocketAddr>) {
         for addr in addrs.iter() {
-            self.send_to(packet, addr)
+            self.send_to(packet, addr);
         }
     }
 
     pub fn send_to_all(&mut self, packet: &T) {
         for addr in self.connections.clone().values() { //FIXME: Urgh
-            self.send_to(packet, &addr.addr)
+            self.send_to(packet, &addr.addr);
         }
     }
 
