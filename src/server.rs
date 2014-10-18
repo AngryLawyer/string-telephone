@@ -8,7 +8,7 @@ use shared::ConnectionConfig;
 use time::now;
 
 
-//FIXME: Ew ew ew
+//FIXME: Ew ew ew - there must be a nicer way of hashing
 fn hash_sender(address: &SocketAddr) -> String {
     match address.ip {
         Ipv4Addr(a, b, c, d) => {
@@ -35,8 +35,13 @@ impl ClientInstance {
     }
 }
 
+/**
+ * Types of packet we can receive as a server
+ */
 pub enum PacketOrCommand <T> {
+    ///A message packet, containing whichever type we're set up to handle
     UserPacket(T),
+    ///An internal control packet
     Command(PacketType)
 }
 
@@ -89,19 +94,26 @@ fn writer_process(mut writer: UdpSocket, _writer_sub_out: Sender<TaskCommand>, w
     }
 }
 
+/**
+ * A UDP server, which manages multiple clients
+ */
 pub struct Server <T> {
+    ///Which address to listen on
     pub addr: SocketAddr,
+    ///Basic configuration for the server
     pub config: ConnectionConfig<T>,
 
     reader_send: Sender<TaskCommand>,
     reader_receive: Receiver<(Packet, SocketAddr)>,
     writer_send: Sender<(Packet, SocketAddr)>,
-    writer_receive: Receiver<TaskCommand>,
 
     connections: TreeMap<String, ClientInstance>
 }
 
 impl <T> Server <T> {
+    /**
+     * Start listening on a given socket
+     */
     pub fn new(addr: SocketAddr, config: ConnectionConfig<T>) -> IoResult<Server<T>> {
         match UdpSocket::bind(addr) {
             Ok(reader) => {
@@ -116,7 +128,7 @@ impl <T> Server <T> {
                 });
 
                 let (writer_out, writer_sub_in) = channel();
-                let (writer_sub_out, writer_in) = channel();
+                let (writer_sub_out, _) = channel();
 
                 spawn(proc() {
                     writer_process(writer, writer_sub_out, writer_sub_in);
@@ -128,7 +140,6 @@ impl <T> Server <T> {
                     reader_send: reader_out,
                     reader_receive: reader_in,
                     writer_send: writer_out,
-                    writer_receive: writer_in,
                     connections: TreeMap::new()
                 })
             }
@@ -136,6 +147,11 @@ impl <T> Server <T> {
         }
     }
 
+    /**
+     * Pump any messages that have been sent to us
+     *
+     * Note that this internally accepts connections and disconnects, with the original packets being returned
+     */
     pub fn poll(&mut self) -> Option<(PacketOrCommand<T>, SocketAddr)> {
         let mut out = None;
         loop {
@@ -185,6 +201,9 @@ impl <T> Server <T> {
         out
     }
 
+    /**
+     * Disconnect, and return, any sockets that have not contacted us for our timeout duration
+     */
     pub fn cull(&mut self) -> Vec<SocketAddr> {
         let mut keep_alive = TreeMap::new();
         let mut culled = vec![];
@@ -203,6 +222,11 @@ impl <T> Server <T> {
         culled
     }
 
+    /**
+     * Send a packet to a specific address
+     *
+     * This will return false if the given address isn't connected to us
+     */
     pub fn send_to(&mut self, packet: &T, addr: &SocketAddr) -> bool {
         let hashed = hash_sender(addr);
         match self.connections.find(&hashed) {
@@ -214,14 +238,20 @@ impl <T> Server <T> {
         }
     }
 
+    /**
+     * Send a packet to multiple addresses
+     */
     pub fn send_to_many(&mut self, packet: &T, addrs: &Vec<SocketAddr>) {
         for addr in addrs.iter() {
             self.send_to(packet, addr);
         }
     }
 
+    /**
+     * Send a packet to every connected client
+     */
     pub fn send_to_all(&mut self, packet: &T) {
-        for addr in self.connections.clone().values() { //FIXME: Urgh
+        for addr in self.connections.clone().values() { //FIXME: Urgh - we shouldn't be cloning our connections
             self.send_to(packet, &addr.addr);
         }
     }
