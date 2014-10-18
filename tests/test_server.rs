@@ -293,7 +293,48 @@ fn send_to_many() {
  */
 #[test]
 fn send_to_all() {
-    unimplemented!()
+    let socket = 64009;
+    let (my_addr, settings) = generate_settings(socket, 121);
+    let (tx, rx) = channel();
+    let tx2 = tx.clone();
+
+    match Server::new(my_addr, settings) {
+        Ok(ref mut server) => {
+            with_bound_socket!((socket) {
+                socket.set_timeout(Some(1000));
+                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                let (message, _) = test_shared::get_message(&mut socket); //Should be the Accept message
+                let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
+
+                tx.send(Packet::deserialize(message[]).ok().expect("Couldn't deserialize a message"));
+            });
+            with_bound_socket!((socket) {
+                socket.set_timeout(Some(1000));
+                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                let (message, _) = test_shared::get_message(&mut socket); //Should be the Accept message
+                let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
+
+                tx2.send(Packet::deserialize(message[]).ok().expect("Couldn't deserialize a message"));
+            });
+            Timer::new().unwrap().sleep(Duration::seconds(1));
+            let source = match server.poll() {
+                Some((Command(PacketConnect), source)) => source,
+                None => fail!("No result found"),
+                _ => fail!("Unexpected poll result")
+            };
+            let source2 = match server.poll() {
+                Some((Command(PacketConnect), source)) => source,
+                None => fail!("No result found"),
+                _ => fail!("Unexpected poll result")
+            };
+            let message_out = vec![1,2];
+            server.send_to_all(&message_out);
+            let message1 = rx.recv();
+            let message2 = rx.recv();
+            assert!(message1.packet_content.unwrap() == message2.packet_content.unwrap());
+        },
+        Err(t) => fail!("Failed to create a server - {}", t)
+    };
 }
 
 /**
