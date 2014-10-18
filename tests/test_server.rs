@@ -1,7 +1,7 @@
 #![feature(macro_rules)]
 extern crate string_telephone;
 
-use string_telephone::{ConnectionConfig, ClientConnectionConfig, Server, Packet, PollEmpty, PacketConnect, PacketMessage, PacketDisconnect, PollDisconnected, Command};
+use string_telephone::{ConnectionConfig, ClientConnectionConfig, Server, Packet, PollEmpty, PacketConnect, PacketMessage, PacketDisconnect, PollDisconnected, Command, UserPacket};
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::time::duration::Duration;
 use std::io::net::udp::UdpSocket;
@@ -200,7 +200,7 @@ fn send_to_one() {
     match Server::new(my_addr, settings) {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
-                socket.set_timeout(Some(1000));
+                socket.set_timeout(Some(5000));
                 socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
@@ -252,7 +252,7 @@ fn send_to_many() {
     match Server::new(my_addr, settings) {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
-                socket.set_timeout(Some(1000));
+                socket.set_timeout(Some(5000));
                 socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
@@ -260,7 +260,7 @@ fn send_to_many() {
                 tx.send(Packet::deserialize(message[]).ok().expect("Couldn't deserialize a message"));
             });
             with_bound_socket!((socket) {
-                socket.set_timeout(Some(1000));
+                socket.set_timeout(Some(5000));
                 socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
@@ -301,7 +301,7 @@ fn send_to_all() {
     match Server::new(my_addr, settings) {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
-                socket.set_timeout(Some(1000));
+                socket.set_timeout(Some(5000));
                 socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
@@ -309,7 +309,7 @@ fn send_to_all() {
                 tx.send(Packet::deserialize(message[]).ok().expect("Couldn't deserialize a message"));
             });
             with_bound_socket!((socket) {
-                socket.set_timeout(Some(1000));
+                socket.set_timeout(Some(5000));
                 socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
@@ -342,7 +342,33 @@ fn send_to_all() {
  */
 #[test]
 fn receive() {
-    unimplemented!()
+    let socket = 64010;
+    let (my_addr, settings) = generate_settings(socket, 121);
+
+    match Server::new(my_addr, settings) {
+        Ok(ref mut server) => {
+            with_bound_socket!((socket) {
+                socket.set_timeout(Some(5000));
+                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                let (message, _) = test_shared::get_message(&mut socket); //Should be the Accept message
+                socket.send_to(Packet::message(121, vec![1,2,3]).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+            });
+            Timer::new().unwrap().sleep(Duration::seconds(1));
+            let source = match server.poll() {
+                Some((Command(PacketConnect), source)) => source,
+                None => fail!("No result found"),
+                _ => fail!("Unexpected poll result")
+            };
+            Timer::new().unwrap().sleep(Duration::seconds(1));
+            let data = match server.poll() {
+                Some((UserPacket(data), _)) => data,
+                None => fail!("No result found"),
+                _ => fail!("Unexpected poll result")
+            };
+            assert!(data == vec![1,2,3]);
+        },
+        Err(t) => fail!("Failed to create a server - {}", t)
+    };
 }
 
 /**
@@ -350,5 +376,32 @@ fn receive() {
  */
 #[test]
 fn client_disconnect() {
-    unimplemented!()
+    let socket = 64011;
+    let (my_addr, settings) = generate_settings(socket, 121);
+
+    match Server::new(my_addr, settings) {
+        Ok(ref mut server) => {
+            with_bound_socket!((socket) {
+                socket.set_timeout(Some(5000));
+                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                let (message, _) = test_shared::get_message(&mut socket); //Should be the Accept message
+                socket.send_to(Packet::disconnect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+            });
+            Timer::new().unwrap().sleep(Duration::seconds(1));
+            match server.poll() {
+                Some((Command(PacketConnect), source)) => source,
+                None => fail!("No result found"),
+                _ => fail!("Unexpected poll result")
+            };
+            assert!(server.all_connections().len() == 1);
+            Timer::new().unwrap().sleep(Duration::seconds(1));
+            match server.poll() {
+                Some((Command(PacketDisconnect), source)) => (),
+                None => fail!("No result found"),
+                _ => fail!("Unexpected poll result")
+            };
+            assert!(server.all_connections().len() == 0);
+        },
+        Err(t) => fail!("Failed to create a server - {}", t)
+    };
 }

@@ -152,7 +152,7 @@ impl <T> Server <T> {
                         PacketDisconnect => {
                             let hash = hash_sender(&src);
                             if self.connections.contains_key(&hash) {
-                                out = Some((Command(PacketConnect), src));
+                                out = Some((Command(PacketDisconnect), src));
                                 self.connections.remove(&hash);
                                 break
                             }

@@ -14,7 +14,7 @@ fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, SocketAddr, Co
     let my_addr = SocketAddr{ ip: Ipv4Addr(0, 0, 0, 0), port: 0 };
     let target_addr = SocketAddr{ ip: Ipv4Addr(127, 0, 0, 1), port: port };
     let settings = ConnectionConfig::new(protocol_id, Duration::seconds(10), test_shared::deserializer, test_shared::serializer);
-    let client_settings = ClientConnectionConfig::new(3, Duration::seconds(2));
+    let client_settings = ClientConnectionConfig::new(3, Duration::seconds(5));
     (my_addr, target_addr, settings, client_settings)
 }
 
