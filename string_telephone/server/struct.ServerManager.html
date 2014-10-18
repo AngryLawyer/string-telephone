@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `ServerManager` struct in crate `string_telephone`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, ServerManager">
+
+    <title>string_telephone::server::ServerManager - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <section class="sidebar">
+        
+        <p class='location'><a href='../index.html'>string_telephone</a>::<wbr><a href='index.html'>server</a></p><div class='block struct'><h2>Structs</h2><a class='struct current' href='struct.ServerManager.html'>ServerManager</a></div>
+    </section>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press 'S' to search, '?' for more options..."
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><div class='in-band'>Struct <a href='../index.html'>string_telephone</a>::<wbr><a href='index.html'>server</a>::<wbr><a class='struct' href=''>ServerManager</a><wbr></div><div class='out-of-band'><span id='render-detail'>
+            <a id="collapse-all" href="#">[-]
+            </a>&nbsp;<a id="expand-all" href="#">[+]</a>
+        </span><a id='src-1791' href='../../src/string_telephone/src/server.rs.html#91-106'>[src]</a></div></h1>
+<pre class='rust struct'>pub struct ServerManager&lt;T&gt; {
+    pub addr: <a class='struct' href='http://doc.rust-lang.org/master/std/io/net/ip/struct.SocketAddr.html' title='std::io::net::ip::SocketAddr'>SocketAddr</a>,
+    // some fields omitted
+}</pre><h2 class='fields'>Fields</h2>
+<table><tr><td id='structfield.addr'><a class='stability Unmarked' title='No stability level'></a><code>addr</code></td><td></td></tr></table><h2 id='methods'>Methods</h2><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;T&gt; <a class='struct' href='../../string_telephone/server/struct.ServerManager.html' title='string_telephone::server::ServerManager'>ServerManager</a>&lt;T&gt;</code></h3><div class='impl-methods'><h4 id='method.new' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.new' class='fnname'>new</a>(protocol_id: <a href='http://doc.rust-lang.org/master/std/primitive.u32.html'>u32</a>, addr: <a class='struct' href='http://doc.rust-lang.org/master/std/io/net/ip/struct.SocketAddr.html' title='std::io::net::ip::SocketAddr'>SocketAddr</a>, timeout_period: <a href='http://doc.rust-lang.org/master/std/primitive.u32.html'>u32</a>, packet_deserializer: fn(&amp;<a class='struct' href='http://doc.rust-lang.org/master/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a href='http://doc.rust-lang.org/master/std/primitive.u8.html'>u8</a>&gt;) -&gt; T, packet_serializer: fn(&amp;T) -&gt; <a class='struct' href='http://doc.rust-lang.org/master/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a href='http://doc.rust-lang.org/master/std/primitive.u8.html'>u8</a>&gt;) -&gt; <a class='type' href='http://doc.rust-lang.org/master/std/io/type.IoResult.html' title='std::io::IoResult'>IoResult</a>&lt;<a class='struct' href='../../string_telephone/server/struct.ServerManager.html' title='string_telephone::server::ServerManager'>ServerManager</a>&lt;T&gt;&gt;</code></h4>
+<h4 id='method.poll' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.poll' class='fnname'>poll</a>(&amp;mut self) -&gt; <a class='type' href='http://doc.rust-lang.org/master/core/option/type.Option.html' title='core::option::Option'>Option</a>&lt;<a href='http://doc.rust-lang.org/master/std/primitive.tuple.html'>(<a class='type' href='../../string_telephone/server/type.PacketOrCommand.html' title='string_telephone::server::PacketOrCommand'>PacketOrCommand</a>&lt;T&gt;, <a class='struct' href='http://doc.rust-lang.org/master/std/io/net/ip/struct.SocketAddr.html' title='std::io::net::ip::SocketAddr'>SocketAddr</a>)</a>&gt;</code></h4>
+<h4 id='method.cull' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.cull' class='fnname'>cull</a>(&amp;mut self) -&gt; <a class='struct' href='http://doc.rust-lang.org/master/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a class='struct' href='http://doc.rust-lang.org/master/std/io/net/ip/struct.SocketAddr.html' title='std::io::net::ip::SocketAddr'>SocketAddr</a>&gt;</code></h4>
+<h4 id='method.send_to' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.send_to' class='fnname'>send_to</a>(&amp;mut self, packet: &amp;T, addr: &amp;<a class='struct' href='http://doc.rust-lang.org/master/std/io/net/ip/struct.SocketAddr.html' title='std::io::net::ip::SocketAddr'>SocketAddr</a>)</code></h4>
+<h4 id='method.send_to_many' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.send_to_many' class='fnname'>send_to_many</a>(&amp;mut self, packet: &amp;T, addrs: &amp;<a class='struct' href='http://doc.rust-lang.org/master/collections/vec/struct.Vec.html' title='collections::vec::Vec'>Vec</a>&lt;<a class='struct' href='http://doc.rust-lang.org/master/std/io/net/ip/struct.SocketAddr.html' title='std::io::net::ip::SocketAddr'>SocketAddr</a>&gt;)</code></h4>
+<h4 id='method.send_to_all' class='method'><a class='stability Unmarked' title='No stability level'></a><code>fn <a href='#method.send_to_all' class='fnname'>send_to_all</a>(&amp;mut self, packet: &amp;T)</code></h4>
+</div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><a class='stability Unmarked' title='No stability level'></a><code>impl&lt;T&gt; <a class='trait' href='http://doc.rust-lang.org/master/core/ops/trait.Drop.html' title='core::ops::Drop'>Drop</a> for <a class='struct' href='../../string_telephone/server/struct.ServerManager.html' title='string_telephone::server::ServerManager'>ServerManager</a>&lt;T&gt;</code></h3><div class='impl-methods'><h4 id='method.drop' class='method'><a class='stability Experimental' title='Experimental'></a><code>fn <a href='#method.drop' class='fnname'>drop</a>(&amp;mut self)</code></h4>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <div id="help" class="hidden">
+        <div class="shortcuts">
+            <h1>Keyboard shortcuts</h1>
+            <dl>
+                <dt>?</dt>
+                <dd>Show this help dialog</dd>
+                <dt>S</dt>
+                <dd>Focus the search field</dd>
+                <dt>&larrb;</dt>
+                <dd>Move up in search results</dd>
+                <dt>&rarrb;</dt>
+                <dd>Move down in search results</dd>
+                <dt>&#9166;</dt>
+                <dd>Go to active search result</dd>
+            </dl>
+        </div>
+        <div class="infos">
+            <h1>Search tricks</h1>
+            <p>
+                Prefix searches with a type followed by a colon (e.g.
+                <code>fn:</code>) to restrict the search to a given type.
+            </p>
+            <p>
+                Accepted types are: <code>fn</code>, <code>mod</code>,
+                <code>struct</code>, <code>enum</code>,
+                <code>trait</code>, <code>typedef</code> (or
+                <code>tdef</code>).
+            </p>
+        </div>
+    </div>
+
+    
+
+    <script>
+        window.rootPath = "../../";
+        window.currentCrate = "string_telephone";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../../jquery.js"></script>
+    <script src="../../main.js"></script>
+    
+    <script async src="../../search-index.js"></script>
+</body>
+</html>

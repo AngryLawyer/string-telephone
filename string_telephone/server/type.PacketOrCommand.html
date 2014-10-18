@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="generator" content="rustdoc">
-    <meta name="description" content="API documentation for the Rust `PacketOrCommand` enum in crate `string_telephone`.">
+    <meta name="description" content="API documentation for the Rust `PacketOrCommand` type in crate `string_telephone`.">
     <meta name="keywords" content="rust, rustlang, rust-lang, PacketOrCommand">
 
     <title>string_telephone::server::PacketOrCommand - Rust</title>
@@ -26,7 +26,7 @@
 
     <section class="sidebar">
         
-        <p class='location'><a href='../index.html'>string_telephone</a>::<wbr><a href='index.html'>server</a></p><div class='block struct'><h2>Structs</h2><a class='struct ' href='struct.Server.html'>Server</a></div><div class='block enum'><h2>Enums</h2><a class='enum current' href='enum.PacketOrCommand.html'>PacketOrCommand</a></div>
+        <p class='location'><a href='../index.html'>string_telephone</a>::<wbr><a href='index.html'>server</a></p><div class='block struct'><h2>Structs</h2><a class='struct ' href='struct.ServerManager.html'>ServerManager</a></div>
     </section>
 
     <nav class="sub">
@@ -40,19 +40,16 @@
         </form>
     </nav>
 
-    <section id='main' class="content enum">
-<h1 class='fqn'><span class='in-band'>Enum <a href='../index.html'>string_telephone</a>::<wbr><a href='index.html'>server</a>::<wbr><a class='enum' href=''>PacketOrCommand</a><wbr></span><span class='out-of-band'><span id='render-detail'>
+    <section id='main' class="content type">
+<h1 class='fqn'><div class='in-band'>Enum <a href='../index.html'>string_telephone</a>::<wbr><a href='index.html'>server</a>::<wbr><a class='type' href=''>PacketOrCommand</a><wbr></div><div class='out-of-band'><span id='render-detail'>
             <a id="collapse-all" href="#">[-]
             </a>&nbsp;<a id="expand-all" href="#">[+]</a>
-        </span><a id='src-2231' href='../../src/string_telephone/src/server.rs.html#41-46'>[src]</a></span></h1>
+        </span><a id='src-1579' href='../../src/string_telephone/src/server.rs.html#37-40'>[src]</a></div></h1>
 <pre class='rust enum'>pub enum PacketOrCommand&lt;T&gt; {
     UserPacket(T),
-    Command(<a class='enum' href='../../string_telephone/packet/enum.PacketType.html' title='string_telephone::packet::PacketType'>PacketType</a>),
-}</pre><div class='docblock'><p>Types of packet we can receive as a server</p>
-</div><h2 class='variants'>Variants</h2>
-<table><tr><td id='variant.UserPacket'><a class='stability Unmarked' title='No stability level'></a><code>UserPacket</code></td><td><div class='docblock'><p>A message packet, containing whichever type we&#39;re set up to handle</p>
-</div></td></tr><tr><td id='variant.Command'><a class='stability Unmarked' title='No stability level'></a><code>Command</code></td><td><div class='docblock'><p>An internal control packet</p>
-</div></td></tr></table></section>
+    Command(<a class='type' href='../../string_telephone/packet/type.PacketType.html' title='string_telephone::packet::PacketType'>PacketType</a>),
+}</pre><h2 class='variants'>Variants</h2>
+<table><tr><td id='variant.UserPacket'><a class='stability Unmarked' title='No stability level'></a><code>UserPacket</code></td><td></td></tr><tr><td id='variant.Command'><a class='stability Unmarked' title='No stability level'></a><code>Command</code></td><td></td></tr></table></section>
     <section id='search' class="content hidden"></section>
 
     <section class="footer"></section>
