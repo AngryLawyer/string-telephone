@@ -111,7 +111,38 @@ fn single_client() {
  */
 #[test]
 fn multiple_clients() {
-    unimplemented!()
+    let socket = 64004;
+    let (my_addr, settings) = generate_settings(socket, 121);
+    let (tx, rx) = channel();
+    let tx2 = tx.clone();
+
+    match Server::new(my_addr, settings) {
+        Ok(ref mut server) => {
+            with_bound_socket!((socket) {
+                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                tx.send(());
+            });
+            with_bound_socket!((socket) {
+                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                tx2.send(());
+            });
+            rx.recv();
+            rx.recv();
+            Timer::new().unwrap().sleep(Duration::seconds(1));
+            match server.poll() {
+                Some((Command(PacketConnect), _))=> (),
+                None => fail!("No result found"),
+                _ => fail!("Unexpected poll result")
+            };
+            match server.poll() {
+                Some((Command(PacketConnect), _))=> (),
+                None => fail!("No result found"),
+                _ => fail!("Unexpected poll result")
+            }
+            assert!(server.all_connections().len() == 2);
+        },
+        Err(t) => fail!("Failed to create a server - {}", t)
+    };
 }
 
 /**
