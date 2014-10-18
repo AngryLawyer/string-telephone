@@ -5,6 +5,7 @@ use string_telephone::{ConnectionConfig, ClientConnectionConfig, Server, Packet,
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::time::duration::Duration;
 use std::io::net::udp::UdpSocket;
+use std::io::Timer;
 
 mod test_shared;
 
@@ -69,6 +70,7 @@ fn bad_client_attempt() {
                 tx.send(());
             });
             rx.recv();
+            Timer::new().unwrap().sleep(Duration::seconds(1));
             assert!(server.poll().is_none())
             assert!(server.all_connections().len() == 0);
         },
@@ -92,8 +94,10 @@ fn single_client() {
                 tx.send(());
             });
             rx.recv();
+            Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
                 Some((Command(PacketConnect), _))=> (),
+                None => fail!("No result found"),
                 _ => fail!("Unexpected poll result")
             }
             assert!(server.all_connections().len() == 1);
