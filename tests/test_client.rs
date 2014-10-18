@@ -18,14 +18,6 @@ fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, SocketAddr, Co
     (my_addr, target_addr, settings, client_settings)
 }
 
-fn get_message(socket: &mut UdpSocket) -> (Vec<u8>, SocketAddr) {
-    let mut buf = [0, ..255];
-    match socket.recv_from(buf) {
-        Ok((amt, src)) => (buf.slice_to(amt).to_vec(), src),
-        Err(e) => fail!("Socket didn't get a message - {}", e)
-    }
-}
-
 macro_rules! with_bound_socket(
     ($socket:ident, ($variable:ident)$code:block) => (
         spawn(proc() {
@@ -64,7 +56,7 @@ fn standard_connection() {
 
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(1000));
-        let (_, src) = get_message(&mut socket);
+        let (_, src) = test_shared::get_message(&mut socket);
         socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Failed to send accept packet");
     });
 
@@ -86,7 +78,7 @@ fn connection_different_protocol_id() {
 
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(1000));
-        let (_, src) = get_message(&mut socket);
+        let (_, src) = test_shared::get_message(&mut socket);
         socket.send_to(Packet::accept(122).serialize().unwrap()[], src).ok().expect("Failed to send accept packet");
     });
 
@@ -108,7 +100,7 @@ fn connection_rejected() {
 
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(1000));
-        let (_, src) = get_message(&mut socket);
+        let (_, src) = test_shared::get_message(&mut socket);
         socket.send_to(Packet::reject(121).serialize().unwrap()[], src).ok().expect("Failed to send reject packet");
     });
 
@@ -136,7 +128,7 @@ fn different_retry_count() {
         socket.set_timeout(Some(10000));
         let mut attempts = 0u8;
         while attempts < 3 {
-            get_message(&mut socket);
+            test_shared::get_message(&mut socket);
             attempts += 1;
         }
 
@@ -163,7 +155,7 @@ fn empty_polling() {
 
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(1000));
-        let (_, src) = get_message(&mut socket);
+        let (_, src) = test_shared::get_message(&mut socket);
         socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Failed to send accept packet");
     });
 
@@ -185,7 +177,7 @@ fn single_item_polling() {
 
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(10000));
-        let (_, src) = get_message(&mut socket);
+        let (_, src) = test_shared::get_message(&mut socket);
         socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
         socket.send_to(Packet::message(121, vec![1]).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
     });
@@ -216,7 +208,7 @@ fn multiple_item_polling() {
 
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(10000));
-        let (_, src) = get_message(&mut socket);
+        let (_, src) = test_shared::get_message(&mut socket);
         socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
         socket.send_to(Packet::message(121, vec![1]).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
         socket.send_to(Packet::message(121, vec![2]).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
@@ -256,7 +248,7 @@ fn ignore_bad_queue_items_polling() {
 
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(10000));
-        let (_, src) = get_message(&mut socket);
+        let (_, src) = test_shared::get_message(&mut socket);
         socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
         socket.send_to(Packet::message(121, vec![1]).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
         socket.send_to(Packet::message(122, vec![2]).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
@@ -295,7 +287,7 @@ fn disconnection() {
 
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(10000));
-        let (_, src) = get_message(&mut socket);
+        let (_, src) = test_shared::get_message(&mut socket);
         socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
         socket.send_to(Packet::disconnect(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
     });
@@ -325,7 +317,7 @@ fn timeout() {
 
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(10000));
-        let (_, src) = get_message(&mut socket);
+        let (_, src) = test_shared::get_message(&mut socket);
         socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
         //Don't send any more data
     });
@@ -358,7 +350,7 @@ fn send_correct_handshake() {
 
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(10000));
-        let (msg, src) = get_message(&mut socket);
+        let (msg, src) = test_shared::get_message(&mut socket);
         //Check what's been sent
         let packet = Packet::deserialize(msg[]);
         socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
@@ -388,10 +380,10 @@ fn send_data() {
 
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(10000));
-        let (_, src) = get_message(&mut socket);
+        let (_, src) = test_shared::get_message(&mut socket);
         socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
         //Check what's been sent
-        let (msg, _) = get_message(&mut socket);
+        let (msg, _) = test_shared::get_message(&mut socket);
         let packet = Packet::deserialize(msg[]);
         tx.send(packet);
     });
@@ -421,10 +413,10 @@ fn client_disconnect() {
 
     with_bound_socket!(target_addr, (socket) {
         socket.set_timeout(Some(10000));
-        let (_, src) = get_message(&mut socket);
+        let (_, src) = test_shared::get_message(&mut socket);
         socket.send_to(Packet::accept(121).serialize().unwrap()[], src).ok().expect("Couldn't send a message");
         //Check what's been sent
-        let (msg, _) = get_message(&mut socket);
+        let (msg, _) = test_shared::get_message(&mut socket);
         let packet = Packet::deserialize(msg[]);
         tx.send(packet);
     });
