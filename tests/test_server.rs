@@ -66,7 +66,7 @@ fn bad_client_attempt() {
     match Server::new(my_addr, settings) {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
-                socket.send_to(Packet::connect(122).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(122, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 tx.send(());
             });
             rx.recv();
@@ -90,7 +90,7 @@ fn single_client() {
     match Server::new(my_addr, settings) {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
-                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 tx.send(());
             });
             rx.recv();
@@ -119,11 +119,11 @@ fn multiple_clients() {
     match Server::new(my_addr, settings) {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
-                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 tx.send(());
             });
             with_bound_socket!((socket) {
-                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 tx2.send(());
             });
             rx.recv();
@@ -159,11 +159,11 @@ fn cull() {
     match Server::new(my_addr, settings) {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
-                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 tx.send(());
             });
             with_bound_socket!((socket) {
-                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 tx2.send(());
             });
             rx.recv();
@@ -201,7 +201,7 @@ fn send_to_one() {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
 
@@ -253,7 +253,7 @@ fn send_to_many() {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
 
@@ -261,7 +261,7 @@ fn send_to_many() {
             });
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
 
@@ -302,7 +302,7 @@ fn send_to_all() {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
 
@@ -310,7 +310,7 @@ fn send_to_all() {
             });
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
 
@@ -349,9 +349,9 @@ fn receive() {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
-                socket.send_to(Packet::message(121, vec![1,2,3]).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::message(121, 1, vec![1,2,3]).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
@@ -383,9 +383,9 @@ fn client_disconnect() {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
-                socket.send_to(Packet::disconnect(121).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::disconnect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
@@ -401,6 +401,82 @@ fn client_disconnect() {
                 _ => fail!("Unexpected poll result")
             };
             assert!(server.all_connections().len() == 0);
+        },
+        Err(t) => fail!("Failed to create a server - {}", t)
+    };
+}
+
+/**
+ * A single client shouldn't be able to connect to us multiple times
+ */
+#[test]
+fn client_tries_multiple_connect() {
+    let socket = 64012;
+    let (my_addr, settings) = generate_settings(socket, 121);
+
+    match Server::new(my_addr, settings) {
+        Ok(ref mut server) => {
+            with_bound_socket!((socket) {
+                socket.set_timeout(Some(5000));
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                test_shared::get_message(&mut socket); //Should be the Accept message
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+            });
+            Timer::new().unwrap().sleep(Duration::seconds(1));
+            match server.poll() {
+                Some((Command(PacketConnect), source)) => source,
+                None => fail!("No result found"),
+                _ => fail!("Unexpected poll result")
+            };
+            assert!(server.all_connections().len() == 1);
+            Timer::new().unwrap().sleep(Duration::seconds(1));
+            match server.poll() {
+                None => (),
+                _ => fail!("Unexpected poll result")
+            };
+            assert!(server.all_connections().len() == 1);
+        },
+        Err(t) => fail!("Failed to create a server - {}", t)
+    };
+}
+
+/**
+ * Test we ignore out-of-sequence messages
+ */
+#[test]
+fn out_of_sequence_packets() {
+    let socket = 64013;
+    let (my_addr, settings) = generate_settings(socket, 121);
+
+    match Server::new(my_addr, settings) {
+        Ok(ref mut server) => {
+            with_bound_socket!((socket) {
+                socket.set_timeout(Some(5000));
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                test_shared::get_message(&mut socket); //Should be the Accept message
+                socket.send_to(Packet::message(121, 1, vec![1]).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::message(121, 0, vec![2]).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::message(121, 2, vec![3]).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+            });
+            Timer::new().unwrap().sleep(Duration::seconds(1));
+            match server.poll() {
+                Some((Command(PacketConnect), _)) => (),
+                None => fail!("No result found"),
+                _ => fail!("Unexpected poll result")
+            };
+            Timer::new().unwrap().sleep(Duration::seconds(1));
+            
+            let mut packets: Vec<Vec<u8>> = vec![];
+            loop {
+                match server.poll() { 
+                    Some((UserPacket(data), _)) => packets.push(data),
+                    None => break,
+                    _ => fail!("Unexpected poll result")
+                };
+            }
+            assert!(packets.len() == 2);
+            assert!(packets[0] == vec![1]);
+            assert!(packets[1] == vec![3]);
         },
         Err(t) => fail!("Failed to create a server - {}", t)
     };

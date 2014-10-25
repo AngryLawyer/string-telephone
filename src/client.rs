@@ -5,7 +5,7 @@ use std::io::Timer;
 use std::comm::{Disconnected, Empty, Select};
 use std::time::duration::Duration;
 use packet::{Packet, PacketAccept, PacketReject, PacketDisconnect, PacketMessage, TaskCommand, Disconnect};
-use shared::ConnectionConfig;
+use shared::{ConnectionConfig, SequenceManager};
 use time::now;
 
 
@@ -76,7 +76,8 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Ta
         };
         if now().to_timespec().sec > expires {
             //FIXME: Need a nicer way of ignoring failure for this
-            match send.send_opt(Packet::disconnect(protocol_id)) {
+            //FIXME: Bad sequence ID!
+            match send.send_opt(Packet::disconnect(protocol_id, 0)) {
                 _ => break
             }
         }
@@ -114,6 +115,8 @@ pub struct Client <T> {
     reader_send: Sender<TaskCommand>,
     reader_receive: Receiver<Packet>,
     writer_send: Sender<Packet>,
+
+    sequence_manager: SequenceManager
 }
 
 /**
@@ -140,6 +143,7 @@ impl ClientConnectionConfig {
 }
 
 impl <T> Client <T> {
+
     /**
      * Connect our Client to a target Server.
      * Will block until either a valid connection is made, or we give up
@@ -172,7 +176,8 @@ impl <T> Client <T> {
                     reader_receive: reader_receive,
                     writer_send: writer_send,
                     connection_state: CommsDisconnected,
-                    config: config
+                    config: config,
+                    sequence_manager: SequenceManager::new()
                 };
 
                 if client.connection_dance(client_connection_config.max_connect_retries, client_connection_config.connect_attempt_timeout) {
@@ -198,7 +203,7 @@ impl <T> Client <T> {
         let mut attempts = 0u;
 
         while attempts < max_attempts && match self.connection_state { CommsConnecting => true, _ => false } {
-            self.writer_send.send(Packet::connect(self.config.protocol_id));
+            self.writer_send.send(Packet::connect(self.config.protocol_id, self.sequence_manager.next_sequence_id()));
 
             let timeout = timer.oneshot(timeout);
 
@@ -259,12 +264,16 @@ impl <T> Client <T> {
                                     break;
                                 },
                                 PacketMessage => {
-                                    match (self.config.packet_deserializer)(&value.packet_content.unwrap()) {
-                                        Some(deserialized) => {
-                                            result = Ok(deserialized);
-                                            break;
-                                        },
-                                        None => ()
+                                    //Are we expecting this packet?
+                                    if self.sequence_manager.packet_is_newer(value.sequence_id) {
+                                        self.sequence_manager.set_newest_packet(value.sequence_id);
+                                        match (self.config.packet_deserializer)(&value.packet_content.unwrap()) {
+                                            Some(deserialized) => {
+                                                result = Ok(deserialized);
+                                                break;
+                                            },
+                                            None => ()
+                                        }
                                     }
                                 },
                                 _ => ()
@@ -283,7 +292,7 @@ impl <T> Client <T> {
      * Send a packet to the server
      */
     pub fn send(&mut self, packet: &T) {
-        match self.writer_send.send_opt(Packet::message(self.config.protocol_id, (self.config.packet_serializer)(packet))) {
+        match self.writer_send.send_opt(Packet::message(self.config.protocol_id, self.sequence_manager.next_sequence_id(), (self.config.packet_serializer)(packet))) {
             _ => () //FIXME: We shouldn't discard errors here
         }
     }
@@ -293,7 +302,7 @@ impl <T> Client <T> {
 impl<T> Drop for Client<T> {
 
     fn drop(&mut self) {
-        match (self.reader_send.send_opt(Disconnect),  self.writer_send.send_opt(Packet::disconnect(self.config.protocol_id))) {
+        match (self.reader_send.send_opt(Disconnect),  self.writer_send.send_opt(Packet::disconnect(self.config.protocol_id, self.sequence_manager.next_sequence_id()))) {
             _ => () //FIXME: This is a bad way of discarding errors
         }
     }

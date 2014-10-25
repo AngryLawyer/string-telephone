@@ -1,4 +1,5 @@
 use std::time::duration::Duration;
+use std::u16;
 /**
  * General configuration for a connection
  */
@@ -25,5 +26,50 @@ impl <T> ConnectionConfig <T> {
             packet_deserializer: packet_deserializer,
             packet_serializer: packet_serializer
         }
+    }
+}
+
+/**
+ * A helper struct to maintain packet ordering and acks
+ */
+#[deriving(Clone)]
+pub struct SequenceManager {
+    pub last_sent_sequence_id: u16,
+    pub last_received_sequence_id: u16
+}
+
+impl SequenceManager {
+    /**
+     * Create a new SequenceManager
+     */
+    pub fn new() -> SequenceManager {
+        SequenceManager {
+            last_sent_sequence_id: 0,
+            last_received_sequence_id: 0
+        }
+    }
+
+    /**
+     * Generate a new sequence ID for us
+     */
+    pub fn next_sequence_id(&mut self) -> u16 {
+        self.last_sent_sequence_id += 1;
+        self.last_sent_sequence_id
+    }
+
+    /**
+     * Is a packet classed as newer than the last we received?
+     */
+    pub fn packet_is_newer(&self, sequence_id: u16) -> bool {
+        let max = u16::MAX;
+        return (sequence_id > self.last_received_sequence_id) && (sequence_id - self.last_received_sequence_id <= max/2) ||
+            (self.last_received_sequence_id > sequence_id) && (self.last_received_sequence_id - sequence_id > max/2);
+    }
+
+    /**
+     * Set the last packet we received
+     */
+    pub fn set_newest_packet(&mut self, sequence_id: u16) {
+        self.last_received_sequence_id = sequence_id;
     }
 }

@@ -15,6 +15,8 @@ pub enum PacketType {
 #[deriving(Clone)]
 pub struct Packet {
     pub protocol_id: u32,
+    ///The current id of the packet
+    pub sequence_id: u16,
     pub packet_type: PacketType,
     ///Serialized user data goes in here
     pub packet_content: Option<Vec<u8>>
@@ -27,41 +29,46 @@ pub enum TaskCommand {
 
 impl Packet {
 
-    pub fn connect(protocol_id: u32) -> Packet {
+    pub fn connect(protocol_id: u32, sequence_id: u16) -> Packet {
         Packet {
             protocol_id: protocol_id,
+            sequence_id: sequence_id,
             packet_type: PacketConnect,
             packet_content: None
         }
     }
 
-    pub fn disconnect(protocol_id: u32) -> Packet {
+    pub fn disconnect(protocol_id: u32, sequence_id: u16) -> Packet {
         Packet {
             protocol_id: protocol_id,
+            sequence_id: sequence_id,
             packet_type: PacketDisconnect,
             packet_content: None
         }
     }
     
-    pub fn accept(protocol_id: u32) -> Packet {
+    pub fn accept(protocol_id: u32, sequence_id: u16) -> Packet {
         Packet {
             protocol_id: protocol_id,
+            sequence_id: sequence_id,
             packet_type: PacketAccept,
             packet_content: None
         }
     }
 
-    pub fn reject(protocol_id: u32) -> Packet {
+    pub fn reject(protocol_id: u32, sequence_id: u16) -> Packet {
         Packet {
             protocol_id: protocol_id,
+            sequence_id: sequence_id,
             packet_type: PacketReject,
             packet_content: None
         }
     }
 
-    pub fn message(protocol_id: u32, message: Vec<u8>) -> Packet {
+    pub fn message(protocol_id: u32, sequence_id: u16, message: Vec<u8>) -> Packet {
         Packet {
             protocol_id: protocol_id,
+            sequence_id: sequence_id,
             packet_type: PacketMessage,
             packet_content: Some(message)
         }
@@ -70,6 +77,7 @@ impl Packet {
     pub fn deserialize(raw: &[u8]) -> IoResult<Packet> {
         let mut r = BufReader::new(raw);
         let protocol_id = try!(r.read_be_u32());
+        let sequence_id = try!(r.read_be_u16());
         let packet_type = try!(r.read_byte());
         let content = try!(r.read_to_end());
 
@@ -77,6 +85,7 @@ impl Packet {
             Some(packet_type) => {
                 Ok(Packet {
                     protocol_id: protocol_id,
+                    sequence_id: sequence_id,
                     packet_type: packet_type,
                     packet_content: if content.len() > 0 { Some(content) } else { None }
                 })
@@ -93,6 +102,7 @@ impl Packet {
     pub fn serialize(&self) -> IoResult<Vec<u8>> {
         let mut w = MemWriter::new();
         try!(w.write_be_u32(self.protocol_id));
+        try!(w.write_be_u16(self.sequence_id));
         try!(w.write_u8(self.packet_type as u8));
         match self.packet_content {
             Some(ref content) => {
