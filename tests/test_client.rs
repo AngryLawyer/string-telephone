@@ -23,7 +23,7 @@ macro_rules! with_bound_socket(
         spawn(proc() {
             match UdpSocket::bind($socket) {
                 Ok(mut $variable) => $code,
-                Err(e) => fail!(e)
+                Err(e) => panic!(e)
             }
         });
     )
@@ -39,7 +39,7 @@ fn connection_ignored() {
     let (my_addr, target_addr, settings, client_settings) = generate_settings(port, 121);
 
     match Client::connect(my_addr, target_addr, settings, client_settings) {
-        Ok(_) => fail!("Reported connected when there is no server!"),
+        Ok(_) => panic!("Reported connected when there is no server!"),
         Err(e) => {
             assert!(e.desc == "Failed to connect")
         }
@@ -64,7 +64,7 @@ fn standard_connection() {
         Ok(_) => {
             //Success!
         },
-        Err(e) => fail!(e)
+        Err(e) => panic!(e)
     };
 }
 
@@ -83,7 +83,7 @@ fn connection_different_protocol_id() {
     });
 
     match Client::connect(my_addr, target_addr, settings, client_settings) {
-        Ok(_) => fail!("Connected to a server with a different protocol ID!"),
+        Ok(_) => panic!("Connected to a server with a different protocol ID!"),
         Err(e) => {
             assert!(e.desc == "Failed to connect")
         }
@@ -105,7 +105,7 @@ fn connection_rejected() {
     });
 
     match Client::connect(my_addr, target_addr, settings, client_settings) {
-        Ok(_) => fail!("Connected to a server that rejected us!"),
+        Ok(_) => panic!("Connected to a server that rejected us!"),
         Err(e) => {
             assert!(e.desc == "Failed to connect")
         }
@@ -163,7 +163,7 @@ fn empty_polling() {
         Ok(ref mut client) => {
             assert!(match client.poll() { Err(PollEmpty) => true, _ => false});
         },
-        Err(e) => fail!(e)
+        Err(e) => panic!(e)
     };
 }
 
@@ -191,10 +191,10 @@ fn single_item_polling() {
                 Ok(packet) => {
                     assert!(packet == vec![1]);
                 },
-                Err(e) => fail!("Couldn't match a polled message! - {}", e)
+                Err(e) => panic!("Couldn't match a polled message! - {}", e)
             };
         },
-        Err(e) => fail!(e)
+        Err(e) => panic!(e)
     };
 }
 
@@ -225,11 +225,11 @@ fn multiple_item_polling() {
                 match client.poll() { 
                     Ok(packet) => packets.push(packet),
                     Err(PollEmpty) => break,
-                    Err(e) => fail!("Unexpected failure - {}", e)
+                    Err(e) => panic!("Unexpected failure - {}", e)
                 };
             }
         },
-        Err(e) => fail!("{}", e)
+        Err(e) => panic!("{}", e)
     };
 
     assert!(packets.len() == 3);
@@ -265,11 +265,11 @@ fn ignore_bad_queue_items_polling() {
                 match client.poll() { 
                     Ok(packet) => packets.push(packet),
                     Err(PollEmpty) => break,
-                    Err(e) => fail!("Unexpected failure - {}", e)
+                    Err(e) => panic!("Unexpected failure - {}", e)
                 };
             }
         },
-        Err(e) => fail!("{}", e)
+        Err(e) => panic!("{}", e)
     };
 
     assert!(packets.len() == 2);
@@ -299,11 +299,11 @@ fn disconnection() {
             loop {
                 match client.poll() { 
                     Err(PollDisconnected) => break,
-                    _ => fail!("Unexpected failure")
+                    _ => panic!("Unexpected failure")
                 };
             }
         },
-        Err(e) => fail!("{}", e)
+        Err(e) => panic!("{}", e)
     };
 }
 
@@ -330,11 +330,11 @@ fn timeout() {
                 match client.poll() { 
                     Err(PollDisconnected) => break,
                     Err(PollEmpty) => (),
-                    _ => fail!("Unexpected result")
+                    _ => panic!("Unexpected result")
                 };
             }
         },
-        Err(e) => fail!("{}", e)
+        Err(e) => panic!("{}", e)
     };
 }
 
@@ -459,11 +459,11 @@ fn out_of_sequence() {
                 match client.poll() { 
                     Ok(packet) => packets.push(packet),
                     Err(PollEmpty) => break,
-                    Err(e) => fail!("Unexpected failure - {}", e)
+                    Err(e) => panic!("Unexpected failure - {}", e)
                 };
             }
         },
-        Err(e) => fail!("{}", e)
+        Err(e) => panic!("{}", e)
     };
 
     assert!(packets.len() == 2);

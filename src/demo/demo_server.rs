@@ -18,7 +18,9 @@ fn main () {
                         Some((UserPacket(packet), _)) => {
                             server.send_to_all(&packet);
                         },
-                        Some(_) => (),
+                        Some(_) => {
+                            println!("PACKET");
+                        },
                         None => break
                     }
                 };

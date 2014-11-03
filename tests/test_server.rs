@@ -14,7 +14,7 @@ macro_rules! with_bound_socket(
         spawn(proc() {
             match UdpSocket::bind(SocketAddr{ ip: Ipv4Addr(0, 0, 0, 0), port: 0 }) {
                 Ok(mut $variable) => $code,
-                Err(e) => fail!(e)
+                Err(e) => panic!(e)
             }
         });
     )
@@ -35,7 +35,7 @@ fn create_server() {
     let (my_addr, settings) = generate_settings(socket, 121);
     match Server::new(my_addr, settings) {
         Ok(_) => (), //passed
-        Err(t) => fail!("Failed to create a server - {}", t)
+        Err(t) => panic!("Failed to create a server - {}", t)
     };
 }
 
@@ -50,7 +50,7 @@ fn empty_poll() {
         Ok(ref mut server) => {
             assert!(server.poll().is_none())
         },
-        Err(t) => fail!("Failed to create a server - {}", t)
+        Err(t) => panic!("Failed to create a server - {}", t)
     };
 }
 
@@ -74,7 +74,7 @@ fn bad_client_attempt() {
             assert!(server.poll().is_none())
             assert!(server.all_connections().len() == 0);
         },
-        Err(t) => fail!("Failed to create a server - {}", t)
+        Err(t) => panic!("Failed to create a server - {}", t)
     };
 }
 
@@ -97,12 +97,12 @@ fn single_client() {
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
                 Some((Command(PacketConnect), _))=> (),
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             }
             assert!(server.all_connections().len() == 1);
         },
-        Err(t) => fail!("Failed to create a server - {}", t)
+        Err(t) => panic!("Failed to create a server - {}", t)
     };
 }
 
@@ -131,17 +131,17 @@ fn multiple_clients() {
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
                 Some((Command(PacketConnect), _))=> (),
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             };
             match server.poll() {
                 Some((Command(PacketConnect), _))=> (),
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             }
             assert!(server.all_connections().len() == 2);
         },
-        Err(t) => fail!("Failed to create a server - {}", t)
+        Err(t) => panic!("Failed to create a server - {}", t)
     };
 }
 
@@ -171,20 +171,20 @@ fn cull() {
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
                 Some((Command(PacketConnect), _))=> (),
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             };
             match server.poll() {
                 Some((Command(PacketConnect), _))=> (),
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             }
             Timer::new().unwrap().sleep(Duration::seconds(1));
             assert!(server.all_connections().len() == 2);
             assert!(server.cull().len() == 2);
             assert!(server.all_connections().len() == 0);
         },
-        Err(t) => fail!("Failed to create a server - {}", t)
+        Err(t) => panic!("Failed to create a server - {}", t)
     };
 }
 
@@ -210,8 +210,8 @@ fn send_to_one() {
             Timer::new().unwrap().sleep(Duration::seconds(1));
             let source = match server.poll() {
                 Some((Command(PacketConnect), source)) => source,
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             };
             let message_out = vec![1,2];
             assert!(server.send_to(&message_out, &source) == true);
@@ -219,7 +219,7 @@ fn send_to_one() {
             assert!(message.packet_type == PacketMessage);
             assert!(message.packet_content.unwrap() == message_out);
         },
-        Err(t) => fail!("Failed to create a server - {}", t)
+        Err(t) => panic!("Failed to create a server - {}", t)
     };
 }
 
@@ -235,7 +235,7 @@ fn send_to_disconnected() {
         Ok(ref mut server) => {
             assert!(server.send_to(&vec![1], &my_addr) == false);
         },
-        Err(t) => fail!("Failed to create a server - {}", t)
+        Err(t) => panic!("Failed to create a server - {}", t)
     };
 }
 
@@ -270,13 +270,13 @@ fn send_to_many() {
             Timer::new().unwrap().sleep(Duration::seconds(1));
             let source = match server.poll() {
                 Some((Command(PacketConnect), source)) => source,
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             };
             let source2 = match server.poll() {
                 Some((Command(PacketConnect), source)) => source,
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             };
             let message_out = vec![1,2];
             server.send_to_many(&message_out, &vec![source, source2]);
@@ -284,7 +284,7 @@ fn send_to_many() {
             let message2 = rx.recv();
             assert!(message1.packet_content.unwrap() == message2.packet_content.unwrap());
         },
-        Err(t) => fail!("Failed to create a server - {}", t)
+        Err(t) => panic!("Failed to create a server - {}", t)
     };
 }
 
@@ -319,13 +319,13 @@ fn send_to_all() {
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
                 Some((Command(PacketConnect), _)) => (),
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             };
             match server.poll() {
                 Some((Command(PacketConnect), _)) => (),
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             };
             let message_out = vec![1,2];
             server.send_to_all(&message_out);
@@ -333,7 +333,7 @@ fn send_to_all() {
             let message2 = rx.recv();
             assert!(message1.packet_content.unwrap() == message2.packet_content.unwrap());
         },
-        Err(t) => fail!("Failed to create a server - {}", t)
+        Err(t) => panic!("Failed to create a server - {}", t)
     };
 }
 
@@ -356,18 +356,18 @@ fn receive() {
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
                 Some((Command(PacketConnect), _)) => (),
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             };
             Timer::new().unwrap().sleep(Duration::seconds(1));
             let data = match server.poll() {
                 Some((UserPacket(data), _)) => data,
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             };
             assert!(data == vec![1,2,3]);
         },
-        Err(t) => fail!("Failed to create a server - {}", t)
+        Err(t) => panic!("Failed to create a server - {}", t)
     };
 }
 
@@ -390,19 +390,19 @@ fn client_disconnect() {
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
                 Some((Command(PacketConnect), source)) => source,
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             };
             assert!(server.all_connections().len() == 1);
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
                 Some((Command(PacketDisconnect), _)) => (),
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             };
             assert!(server.all_connections().len() == 0);
         },
-        Err(t) => fail!("Failed to create a server - {}", t)
+        Err(t) => panic!("Failed to create a server - {}", t)
     };
 }
 
@@ -425,18 +425,18 @@ fn client_tries_multiple_connect() {
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
                 Some((Command(PacketConnect), source)) => source,
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             };
             assert!(server.all_connections().len() == 1);
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
                 None => (),
-                _ => fail!("Unexpected poll result")
+                _ => panic!("Unexpected poll result")
             };
             assert!(server.all_connections().len() == 1);
         },
-        Err(t) => fail!("Failed to create a server - {}", t)
+        Err(t) => panic!("Failed to create a server - {}", t)
     };
 }
 
@@ -461,8 +461,8 @@ fn out_of_sequence_packets() {
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
                 Some((Command(PacketConnect), _)) => (),
-                None => fail!("No result found"),
-                _ => fail!("Unexpected poll result")
+                None => panic!("No result found"),
+                _ => panic!("Unexpected poll result")
             };
             Timer::new().unwrap().sleep(Duration::seconds(1));
             
@@ -471,13 +471,13 @@ fn out_of_sequence_packets() {
                 match server.poll() { 
                     Some((UserPacket(data), _)) => packets.push(data),
                     None => break,
-                    _ => fail!("Unexpected poll result")
+                    _ => panic!("Unexpected poll result")
                 };
             }
             assert!(packets.len() == 2);
             assert!(packets[0] == vec![1]);
             assert!(packets[1] == vec![3]);
         },
-        Err(t) => fail!("Failed to create a server - {}", t)
+        Err(t) => panic!("Failed to create a server - {}", t)
     };
 }

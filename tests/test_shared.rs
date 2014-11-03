@@ -5,7 +5,7 @@ pub fn get_message(socket: &mut UdpSocket) -> (Vec<u8>, SocketAddr) {
     let mut buf = [0, ..255];
     match socket.recv_from(buf) {
         Ok((amt, src)) => (buf.slice_to(amt).to_vec(), src),
-        Err(e) => fail!("Socket didn't get a message - {}", e)
+        Err(e) => panic!("Socket didn't get a message - {}", e)
     }
 }
 
