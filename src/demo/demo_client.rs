@@ -5,7 +5,7 @@ use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::io;
 use std::time::duration::Duration;
 
-use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, PollDisconnected};
+use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, PollFailResult};
 
 mod demo_shared;
 
@@ -35,7 +35,7 @@ fn main () {
                     Ok(message) => {
                         println!("{}", message);
                     },
-                    Err(PollDisconnected) => {
+                    Err(PollFailResult::Disconnected) => {
                         println!("Timed out");
                         break
                     },

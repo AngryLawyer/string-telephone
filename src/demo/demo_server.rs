@@ -3,7 +3,7 @@ extern crate string_telephone;
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::time::duration::Duration;
 
-use string_telephone::{ConnectionConfig, Server, UserPacket};
+use string_telephone::{ConnectionConfig, Server, PacketOrCommand};
 
 mod demo_shared;
 
@@ -15,7 +15,7 @@ fn main () {
             loop {
                 loop {
                     match server.poll() {
-                        Some((UserPacket(packet), _)) => {
+                        Some((PacketOrCommand::UserPacket(packet), _)) => {
                             server.send_to_all(&packet);
                         },
                         Some(_) => {

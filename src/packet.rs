@@ -4,11 +4,11 @@ use std::io::{BufReader, MemWriter};
 ///Headers for various different built-in message types
 #[deriving(FromPrimitive, Clone, Show, PartialEq)]
 pub enum PacketType {
-    PacketConnect = 0,
-    PacketAccept,
-    PacketReject,
-    PacketDisconnect,
-    PacketMessage
+    Connect = 0,
+    Accept,
+    Reject,
+    Disconnect,
+    Message
 }
 
 ///The underlying shape for transferring data.
@@ -33,7 +33,7 @@ impl Packet {
         Packet {
             protocol_id: protocol_id,
             sequence_id: sequence_id,
-            packet_type: PacketConnect,
+            packet_type: PacketType::Connect,
             packet_content: None
         }
     }
@@ -42,7 +42,7 @@ impl Packet {
         Packet {
             protocol_id: protocol_id,
             sequence_id: sequence_id,
-            packet_type: PacketDisconnect,
+            packet_type: PacketType::Disconnect,
             packet_content: None
         }
     }
@@ -51,7 +51,7 @@ impl Packet {
         Packet {
             protocol_id: protocol_id,
             sequence_id: sequence_id,
-            packet_type: PacketAccept,
+            packet_type: PacketType::Accept,
             packet_content: None
         }
     }
@@ -60,7 +60,7 @@ impl Packet {
         Packet {
             protocol_id: protocol_id,
             sequence_id: sequence_id,
-            packet_type: PacketReject,
+            packet_type: PacketType::Reject,
             packet_content: None
         }
     }
@@ -69,7 +69,7 @@ impl Packet {
         Packet {
             protocol_id: protocol_id,
             sequence_id: sequence_id,
-            packet_type: PacketMessage,
+            packet_type: PacketType::Message,
             packet_content: Some(message)
         }
     }

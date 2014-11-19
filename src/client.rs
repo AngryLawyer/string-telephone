@@ -4,7 +4,7 @@ use std::io::{IoResult, IoError, OtherIoError, TimedOut};
 use std::io::Timer;
 use std::comm::{Disconnected, Empty, Select};
 use std::time::duration::Duration;
-use packet::{Packet, PacketAccept, PacketReject, PacketDisconnect, PacketMessage, TaskCommand, Disconnect};
+use packet::{Packet, PacketType, TaskCommand};
 use shared::{ConnectionConfig, SequenceManager};
 use time::now;
 
@@ -13,9 +13,9 @@ use time::now;
  * The current state of a connection
  */
 pub enum ConnectionState {
-    CommsDisconnected,
-    CommsConnecting,
-    CommsConnected
+    Disconnected,
+    Connecting,
+    Connected
 }
 
 /**
@@ -23,8 +23,8 @@ pub enum ConnectionState {
  */
 #[deriving(Show)]
 pub enum PollFailResult {
-    PollEmpty,
-    PollDisconnected
+    Empty,
+    Disconnected
 }
 
 fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<TaskCommand>, target_addr: SocketAddr, protocol_id: u32, timeout_period: Duration) {
@@ -34,7 +34,7 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Ta
     let mut expires = now().to_timespec().sec + timeout_period.num_seconds();
 
     loop {
-        match reader.recv_from(buf) {
+        match reader.recv_from(&mut buf) {
             Ok((amt, src)) => {
                 if src == target_addr {
                     match Packet::deserialize(buf.slice_to(amt)) {
@@ -59,7 +59,7 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Ta
                 match e.kind {
                     TimedOut => {
                         match recv.try_recv() {
-                            Ok(Disconnect) => {
+                            Ok(TaskCommand::Disconnect) => {
                                 break;
                             },
                             Err(Disconnected) => {
@@ -175,7 +175,7 @@ impl <T> Client <T> {
                     reader_send: reader_send,
                     reader_receive: reader_receive,
                     writer_send: writer_send,
-                    connection_state: CommsDisconnected,
+                    connection_state: ConnectionState::Disconnected,
                     config: config,
                     sequence_manager: SequenceManager::new()
                 };
@@ -198,11 +198,11 @@ impl <T> Client <T> {
      * A blocking connection request
      */
     fn connection_dance(&mut self, max_attempts: uint, timeout: Duration) -> bool {
-        self.connection_state = CommsConnecting;
+        self.connection_state = ConnectionState::Connecting;
         let mut timer = Timer::new().unwrap();
         let mut attempts = 0u;
 
-        while attempts < max_attempts && match self.connection_state { CommsConnecting => true, _ => false } {
+        while attempts < max_attempts && match self.connection_state { ConnectionState::Connecting => true, _ => false } {
             self.writer_send.send(Packet::connect(self.config.protocol_id, self.sequence_manager.next_sequence_id()));
 
             let timeout = timer.oneshot(timeout);
@@ -216,14 +216,14 @@ impl <T> Client <T> {
             if ret == reader.id() {
                 let packet = self.reader_receive.recv();
                 match packet.packet_type {
-                    PacketAccept => {
-                        self.connection_state = CommsConnected;
+                    PacketType::Accept => {
+                        self.connection_state = ConnectionState::Connected;
                     }
-                    PacketReject => {
-                        self.connection_state = CommsDisconnected;
+                    PacketType::Reject => {
+                        self.connection_state = ConnectionState::Disconnected;
                     }
-                    PacketDisconnect => {
-                        self.connection_state = CommsDisconnected;
+                    PacketType::Disconnect => {
+                        self.connection_state = ConnectionState::Disconnected;
                     }
                     _ => (),
                 }
@@ -236,12 +236,12 @@ impl <T> Client <T> {
         }
 
         match self.connection_state {
-            CommsConnecting => {
-                self.connection_state = CommsDisconnected;
+            ConnectionState::Connecting => {
+                self.connection_state = ConnectionState::Disconnected;
                 false
             },
-            CommsDisconnected => false,
-            CommsConnected => {
+            ConnectionState::Disconnected => false,
+            ConnectionState::Connected => {
                 true
             }
         }
@@ -252,18 +252,18 @@ impl <T> Client <T> {
      */
     pub fn poll(&mut self) -> Result<T, PollFailResult> {
         match self.connection_state {
-            CommsConnected => {
-                let mut result = Err(PollEmpty);
+            ConnectionState::Connected => {
+                let mut result = Err(PollFailResult::Empty);
                 loop {
                     match self.reader_receive.try_recv() {
                         Ok(value) => {
                             match value.packet_type {
-                                PacketDisconnect => {
-                                    self.connection_state = CommsDisconnected;
-                                    result = Err(PollDisconnected);
+                                PacketType::Disconnect => {
+                                    self.connection_state = ConnectionState::Disconnected;
+                                    result = Err(PollFailResult::Disconnected);
                                     break;
                                 },
-                                PacketMessage => {
+                                PacketType::Message => {
                                     //Are we expecting this packet?
                                     if self.sequence_manager.packet_is_newer(value.sequence_id) {
                                         self.sequence_manager.set_newest_packet(value.sequence_id);
@@ -284,7 +284,7 @@ impl <T> Client <T> {
                 }
                 result
             },
-            _ => Err(PollDisconnected)
+            _ => Err(PollFailResult::Disconnected)
         }
     }
 
@@ -302,7 +302,7 @@ impl <T> Client <T> {
 impl<T> Drop for Client<T> {
 
     fn drop(&mut self) {
-        match (self.reader_send.send_opt(Disconnect),  self.writer_send.send_opt(Packet::disconnect(self.config.protocol_id, self.sequence_manager.next_sequence_id()))) {
+        match (self.reader_send.send_opt(TaskCommand::Disconnect),  self.writer_send.send_opt(Packet::disconnect(self.config.protocol_id, self.sequence_manager.next_sequence_id()))) {
             _ => () //FIXME: This is a bad way of discarding errors
         }
     }

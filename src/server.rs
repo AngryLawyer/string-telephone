@@ -3,7 +3,7 @@ use std::io::net::ip::{SocketAddr, Ipv4Addr, Ipv6Addr};
 use std::io::{IoResult, TimedOut};
 use std::comm::{Disconnected, Empty};
 use std::collections::TreeMap;
-use packet::{Packet, PacketType, PacketConnect, PacketDisconnect, PacketMessage, TaskCommand, Disconnect};
+use packet::{Packet, PacketType, TaskCommand};
 use shared::{ConnectionConfig, SequenceManager};
 use time::now;
 
@@ -55,7 +55,7 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<(Packet, SocketA
     let mut buf = [0, ..1023];
     reader.set_timeout(Some(1000));
     loop {
-        match reader.recv_from(buf) {
+        match reader.recv_from(&mut buf) {
             Ok((amt, src)) => {
                 match Packet::deserialize(buf.slice_to(amt)) {
                     Ok(packet) => {
@@ -70,7 +70,7 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<(Packet, SocketA
                 match e.kind {
                     TimedOut => {
                         match reader_sub_in.try_recv() {
-                            Ok(Disconnect) => {
+                            Ok(TaskCommand::Disconnect) => {
                                 break;
                             },
                             Err(Disconnected) => {
@@ -165,33 +165,33 @@ impl <T> Server <T> {
                 Ok((packet, src)) => {
                     //Handle any new connections
                     match packet.packet_type {
-                        PacketConnect => {
+                        PacketType::Connect => {
                             let hash = hash_sender(&src);
                             //Don't accept multiple connection attempts from the same client
                             if self.connections.contains_key(&hash) == false {
                                 self.connections.insert(hash_sender(&src), ClientInstance::new(src, now().to_timespec().sec + self.config.timeout_period.num_seconds()));
                                 self.writer_send.send((Packet::accept(self.config.protocol_id, 0), src));
-                                out = Some((Command(PacketConnect), src));
+                                out = Some((PacketOrCommand::Command(PacketType::Connect), src));
                             }
                             break
                         },
-                        PacketDisconnect => {
+                        PacketType::Disconnect => {
                             let hash = hash_sender(&src);
                             if self.connections.contains_key(&hash) {
-                                out = Some((Command(PacketDisconnect), src));
+                                out = Some((PacketOrCommand::Command(PacketType::Disconnect), src));
                                 self.connections.remove(&hash);
                                 break
                             }
                         },
-                        PacketMessage => {
+                        PacketType::Message => {
                             let hash = hash_sender(&src);
-                            match self.connections.find_mut(&hash) {
+                            match self.connections.get_mut(&hash) {
                                 Some(comms) => {
                                     if comms.sequence_manager.packet_is_newer(packet.sequence_id) {
                                         comms.sequence_manager.set_newest_packet(packet.sequence_id);
                                         match (self.config.packet_deserializer)(&packet.packet_content.unwrap()) {
                                             Some(deserialized) => {
-                                                out = Some((UserPacket(deserialized), src));
+                                                out = Some((PacketOrCommand::UserPacket(deserialized), src));
                                                 //Update our timeout
                                                 comms.timeout = now().to_timespec().sec + self.config.timeout_period.num_seconds();
                                                 break
@@ -242,7 +242,7 @@ impl <T> Server <T> {
      */
     pub fn send_to(&mut self, packet: &T, addr: &SocketAddr) -> bool {
         let hashed = hash_sender(addr);
-        match self.connections.find_mut(&hashed) {
+        match self.connections.get_mut(&hashed) {
             Some(comms) => {
                 self.writer_send.send((Packet::message(self.config.protocol_id, comms.next_sequence_id(), (self.config.packet_serializer)(packet)), addr.clone()));
                 true
@@ -281,6 +281,6 @@ impl <T> Server <T> {
 impl <T> Drop for Server <T> {
 
     fn drop(&mut self) {
-        self.reader_send.send(Disconnect);
+        self.reader_send.send(TaskCommand::Disconnect);
     }
 }
