@@ -5,6 +5,7 @@
 //!
 #![feature(unsafe_destructor)]
 #![feature(globs)]
+#![feature(macro_rules)]
 #![crate_name = "string_telephone"]
 #![crate_type="lib"]
 
@@ -19,3 +20,10 @@ pub mod packet;
 pub mod shared;
 pub mod client;
 pub mod server;
+
+#[cfg(test)]
+mod tests {
+    mod test_shared;
+    mod test_client;
+    mod test_server;
+}

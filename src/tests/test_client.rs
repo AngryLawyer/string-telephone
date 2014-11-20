@@ -1,14 +1,12 @@
-#![feature(macro_rules)]
-extern crate string_telephone;
-
-use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, Packet, PollEmpty, PacketConnect, PacketMessage, PacketDisconnect, PollDisconnected};
+use shared::ConnectionConfig;
+use client::{ClientConnectionConfig, Client, PollFailResult};
+use packet::{Packet, PacketType};
 
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::io::net::udp::UdpSocket;
 use std::io::Timer;
 use std::time::duration::Duration;
-
-mod test_shared;
+use tests::test_shared;
 
 fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, SocketAddr, ConnectionConfig<Vec<u8>>, ClientConnectionConfig) {
     let my_addr = SocketAddr{ ip: Ipv4Addr(0, 0, 0, 0), port: 0 };
@@ -161,7 +159,7 @@ fn empty_polling() {
 
     match Client::connect(my_addr, target_addr, settings, client_settings) {
         Ok(ref mut client) => {
-            assert!(match client.poll() { Err(PollEmpty) => true, _ => false});
+            assert!(match client.poll() { Err(PollFailResult::Empty) => true, _ => false});
         },
         Err(e) => panic!(e)
     };
@@ -224,7 +222,7 @@ fn multiple_item_polling() {
             loop {
                 match client.poll() { 
                     Ok(packet) => packets.push(packet),
-                    Err(PollEmpty) => break,
+                    Err(PollFailResult::Empty) => break,
                     Err(e) => panic!("Unexpected failure - {}", e)
                 };
             }
@@ -264,7 +262,7 @@ fn ignore_bad_queue_items_polling() {
             loop {
                 match client.poll() { 
                     Ok(packet) => packets.push(packet),
-                    Err(PollEmpty) => break,
+                    Err(PollFailResult::Empty) => break,
                     Err(e) => panic!("Unexpected failure - {}", e)
                 };
             }
@@ -298,7 +296,7 @@ fn disconnection() {
             Timer::new().unwrap().sleep(Duration::seconds(1));
             loop {
                 match client.poll() { 
-                    Err(PollDisconnected) => break,
+                    Err(PollFailResult::Disconnected) => break,
                     _ => panic!("Unexpected failure")
                 };
             }
@@ -328,8 +326,8 @@ fn timeout() {
             Timer::new().unwrap().sleep(Duration::seconds(1));
             loop {
                 match client.poll() { 
-                    Err(PollDisconnected) => break,
-                    Err(PollEmpty) => (),
+                    Err(PollFailResult::Disconnected) => break,
+                    Err(PollFailResult::Empty) => (),
                     _ => panic!("Unexpected result")
                 };
             }
@@ -364,7 +362,7 @@ fn send_correct_handshake() {
 
     let packet = rx.recv().unwrap();
     assert!(packet.protocol_id == 121);
-    assert!(packet.packet_type == PacketConnect);
+    assert!(packet.packet_type == PacketType::Connect);
     assert!(packet.packet_content.is_none())
 }
 
@@ -397,7 +395,7 @@ fn send_data() {
 
     let packet = rx.recv().unwrap();
     assert!(packet.protocol_id == 121);
-    assert!(packet.packet_type == PacketMessage);
+    assert!(packet.packet_type == PacketType::Message);
     assert!(packet.packet_content.unwrap() == vec![1, 2, 3])
 }
 
@@ -428,7 +426,7 @@ fn client_disconnect() {
 
     let packet = rx.recv().unwrap();
     assert!(packet.protocol_id == 121);
-    assert!(packet.packet_type == PacketDisconnect);
+    assert!(packet.packet_type == PacketType::Disconnect);
     assert!(packet.packet_content.is_none())
 }
 
@@ -458,7 +456,7 @@ fn out_of_sequence() {
             loop {
                 match client.poll() { 
                     Ok(packet) => packets.push(packet),
-                    Err(PollEmpty) => break,
+                    Err(PollFailResult::Empty) => break,
                     Err(e) => panic!("Unexpected failure - {}", e)
                 };
             }

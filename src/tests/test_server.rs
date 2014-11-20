@@ -1,13 +1,12 @@
-#![feature(macro_rules)]
-extern crate string_telephone;
-
-use string_telephone::{ConnectionConfig, Server, Packet, PacketConnect, PacketMessage, PacketDisconnect, Command, UserPacket};
+use shared::ConnectionConfig;
+use server::Server;
+use packet::{Packet, PacketType};
+use server::PacketOrCommand;
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::time::duration::Duration;
 use std::io::net::udp::UdpSocket;
 use std::io::Timer;
-
-mod test_shared;
+use tests::test_shared;
 
 macro_rules! with_bound_socket(
     (($variable:ident)$code:block) => (
@@ -96,7 +95,7 @@ fn single_client() {
             rx.recv();
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
-                Some((Command(PacketConnect), _))=> (),
+                Some((PacketOrCommand::Command(PacketType::Connect), _))=> (),
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             }
@@ -130,12 +129,12 @@ fn multiple_clients() {
             rx.recv();
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
-                Some((Command(PacketConnect), _))=> (),
+                Some((PacketOrCommand::Command(PacketType::Connect), _))=> (),
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             };
             match server.poll() {
-                Some((Command(PacketConnect), _))=> (),
+                Some((PacketOrCommand::Command(PacketType::Connect), _))=> (),
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             }
@@ -170,12 +169,12 @@ fn cull() {
             rx.recv();
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
-                Some((Command(PacketConnect), _))=> (),
+                Some((PacketOrCommand::Command(PacketType::Connect), _))=> (),
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             };
             match server.poll() {
-                Some((Command(PacketConnect), _))=> (),
+                Some((PacketOrCommand::Command(PacketType::Connect), _))=> (),
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             }
@@ -209,14 +208,14 @@ fn send_to_one() {
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             let source = match server.poll() {
-                Some((Command(PacketConnect), source)) => source,
+                Some((PacketOrCommand::Command(PacketType::Connect), source)) => source,
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             };
             let message_out = vec![1,2];
             assert!(server.send_to(&message_out, &source) == true);
             let message = rx.recv();
-            assert!(message.packet_type == PacketMessage);
+            assert!(message.packet_type == PacketType::Message);
             assert!(message.packet_content.unwrap() == message_out);
         },
         Err(t) => panic!("Failed to create a server - {}", t)
@@ -269,12 +268,12 @@ fn send_to_many() {
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             let source = match server.poll() {
-                Some((Command(PacketConnect), source)) => source,
+                Some((PacketOrCommand::Command(PacketType::Connect), source)) => source,
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             };
             let source2 = match server.poll() {
-                Some((Command(PacketConnect), source)) => source,
+                Some((PacketOrCommand::Command(PacketType::Connect), source)) => source,
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             };
@@ -318,12 +317,12 @@ fn send_to_all() {
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
-                Some((Command(PacketConnect), _)) => (),
+                Some((PacketOrCommand::Command(PacketType::Connect), _)) => (),
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             };
             match server.poll() {
-                Some((Command(PacketConnect), _)) => (),
+                Some((PacketOrCommand::Command(PacketType::Connect), _)) => (),
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             };
@@ -355,13 +354,13 @@ fn receive() {
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
-                Some((Command(PacketConnect), _)) => (),
+                Some((PacketOrCommand::Command(PacketType::Connect), _)) => (),
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             };
             Timer::new().unwrap().sleep(Duration::seconds(1));
             let data = match server.poll() {
-                Some((UserPacket(data), _)) => data,
+                Some((PacketOrCommand::UserPacket(data), _)) => data,
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             };
@@ -389,14 +388,14 @@ fn client_disconnect() {
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
-                Some((Command(PacketConnect), source)) => source,
+                Some((PacketOrCommand::Command(PacketType::Connect), source)) => source,
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             };
             assert!(server.all_connections().len() == 1);
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
-                Some((Command(PacketDisconnect), _)) => (),
+                Some((PacketOrCommand::Command(PacketType::Disconnect), _)) => (),
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             };
@@ -424,7 +423,7 @@ fn client_tries_multiple_connect() {
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
-                Some((Command(PacketConnect), source)) => source,
+                Some((PacketOrCommand::Command(PacketType::Connect), source)) => source,
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             };
@@ -460,7 +459,7 @@ fn out_of_sequence_packets() {
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
-                Some((Command(PacketConnect), _)) => (),
+                Some((PacketOrCommand::Command(PacketType::Connect), _)) => (),
                 None => panic!("No result found"),
                 _ => panic!("Unexpected poll result")
             };
@@ -469,7 +468,7 @@ fn out_of_sequence_packets() {
             let mut packets: Vec<Vec<u8>> = vec![];
             loop {
                 match server.poll() { 
-                    Some((UserPacket(data), _)) => packets.push(data),
+                    Some((PacketOrCommand::UserPacket(data), _)) => packets.push(data),
                     None => break,
                     _ => panic!("Unexpected poll result")
                 };
