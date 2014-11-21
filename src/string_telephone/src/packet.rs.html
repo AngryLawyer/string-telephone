@@ -162,11 +162,11 @@
 <span class='doccomment'>///Headers for various different built-in message types</span>
 <span class='attribute'>#[<span class='ident'>deriving</span>(<span class='ident'>FromPrimitive</span>, <span class='ident'>Clone</span>, <span class='ident'>Show</span>, <span class='ident'>PartialEq</span>)]</span>
 <span class='kw'>pub</span> <span class='kw'>enum</span> <span class='ident'>PacketType</span> {
-    <span class='ident'>PacketConnect</span> <span class='op'>=</span> <span class='number'>0</span>,
-    <span class='ident'>PacketAccept</span>,
-    <span class='ident'>PacketReject</span>,
-    <span class='ident'>PacketDisconnect</span>,
-    <span class='ident'>PacketMessage</span>
+    <span class='ident'>Connect</span> <span class='op'>=</span> <span class='number'>0</span>,
+    <span class='ident'>Accept</span>,
+    <span class='ident'>Reject</span>,
+    <span class='ident'>Disconnect</span>,
+    <span class='ident'>Message</span>
 }
 
 <span class='doccomment'>///The underlying shape for transferring data.</span>
@@ -191,7 +191,7 @@
         <span class='ident'>Packet</span> {
             <span class='ident'>protocol_id</span>: <span class='ident'>protocol_id</span>,
             <span class='ident'>sequence_id</span>: <span class='ident'>sequence_id</span>,
-            <span class='ident'>packet_type</span>: <span class='ident'>PacketConnect</span>,
+            <span class='ident'>packet_type</span>: <span class='ident'>PacketType</span>::<span class='ident'>Connect</span>,
             <span class='ident'>packet_content</span>: <span class='prelude-val'>None</span>
         }
     }
@@ -200,7 +200,7 @@
         <span class='ident'>Packet</span> {
             <span class='ident'>protocol_id</span>: <span class='ident'>protocol_id</span>,
             <span class='ident'>sequence_id</span>: <span class='ident'>sequence_id</span>,
-            <span class='ident'>packet_type</span>: <span class='ident'>PacketDisconnect</span>,
+            <span class='ident'>packet_type</span>: <span class='ident'>PacketType</span>::<span class='ident'>Disconnect</span>,
             <span class='ident'>packet_content</span>: <span class='prelude-val'>None</span>
         }
     }
@@ -209,7 +209,7 @@
         <span class='ident'>Packet</span> {
             <span class='ident'>protocol_id</span>: <span class='ident'>protocol_id</span>,
             <span class='ident'>sequence_id</span>: <span class='ident'>sequence_id</span>,
-            <span class='ident'>packet_type</span>: <span class='ident'>PacketAccept</span>,
+            <span class='ident'>packet_type</span>: <span class='ident'>PacketType</span>::<span class='ident'>Accept</span>,
             <span class='ident'>packet_content</span>: <span class='prelude-val'>None</span>
         }
     }
@@ -218,7 +218,7 @@
         <span class='ident'>Packet</span> {
             <span class='ident'>protocol_id</span>: <span class='ident'>protocol_id</span>,
             <span class='ident'>sequence_id</span>: <span class='ident'>sequence_id</span>,
-            <span class='ident'>packet_type</span>: <span class='ident'>PacketReject</span>,
+            <span class='ident'>packet_type</span>: <span class='ident'>PacketType</span>::<span class='ident'>Reject</span>,
             <span class='ident'>packet_content</span>: <span class='prelude-val'>None</span>
         }
     }
@@ -227,7 +227,7 @@
         <span class='ident'>Packet</span> {
             <span class='ident'>protocol_id</span>: <span class='ident'>protocol_id</span>,
             <span class='ident'>sequence_id</span>: <span class='ident'>sequence_id</span>,
-            <span class='ident'>packet_type</span>: <span class='ident'>PacketMessage</span>,
+            <span class='ident'>packet_type</span>: <span class='ident'>PacketType</span>::<span class='ident'>Message</span>,
             <span class='ident'>packet_content</span>: <span class='prelude-val'>Some</span>(<span class='ident'>message</span>)
         }
     }
