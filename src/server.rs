@@ -1,8 +1,9 @@
 use std::io::net::udp::UdpSocket;
 use std::io::net::ip::{SocketAddr, Ipv4Addr, Ipv6Addr};
 use std::io::{IoResult, TimedOut};
-use std::comm::{Disconnected, Empty};
-use std::collections::TreeMap;
+use std::sync::mpsc::{Sender, Receiver, TryRecvError, channel, Select};
+use std::thread::Thread;
+use std::collections::BTreeMap;
 use packet::{Packet, PacketType, TaskCommand};
 use shared::{ConnectionConfig, SequenceManager};
 use time::now;
@@ -73,10 +74,10 @@ fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<(Packet, SocketA
                             Ok(TaskCommand::Disconnect) => {
                                 break;
                             },
-                            Err(Disconnected) => {
+                            Err(TryRecvError::Disconnected) => {
                                 break;
                             },
-                            Err(Empty) => ()
+                            Err(TryRecvError::Empty) => ()
                         }
                     },
                     _ => ()
@@ -113,7 +114,7 @@ pub struct Server <T> {
     reader_receive: Receiver<(Packet, SocketAddr)>,
     writer_send: Sender<(Packet, SocketAddr)>,
 
-    connections: TreeMap<String, ClientInstance>
+    connections: BTreeMap<String, ClientInstance>
 }
 
 impl <T> Server <T> {
@@ -129,14 +130,14 @@ impl <T> Server <T> {
 
                 let protocol_id = config.protocol_id;
 
-                spawn(|| {
+                Thread::spawn(|| {
                     reader_process(reader, reader_sub_out, reader_sub_in, protocol_id);
                 });
 
                 let (writer_out, writer_sub_in) = channel();
                 let (writer_sub_out, _) = channel();
 
-                spawn(|| {
+                Thread::spawn(|| {
                     writer_process(writer, writer_sub_out, writer_sub_in);
                 });
                 
@@ -146,7 +147,7 @@ impl <T> Server <T> {
                     reader_send: reader_out,
                     reader_receive: reader_in,
                     writer_send: writer_out,
-                    connections: TreeMap::new()
+                    connections: BTreeMap::new()
                 })
             }
             Err(e) => Err(e)
@@ -218,7 +219,7 @@ impl <T> Server <T> {
      * Disconnect, and return, any sockets that have not contacted us for our timeout duration
      */
     pub fn cull(&mut self) -> Vec<SocketAddr> {
-        let mut keep_alive = TreeMap::new();
+        let mut keep_alive = BTreeMap::new();
         let mut culled = vec![];
 
         let now = now().to_timespec().sec;

@@ -1,5 +1,6 @@
 use std::io::{IoResult, IoError, OtherIoError};
 use std::io::{BufReader, MemWriter};
+use std::num::FromPrimitive;
 
 ///Headers for various different built-in message types
 #[deriving(FromPrimitive, Clone, Show, PartialEq)]

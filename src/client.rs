@@ -2,7 +2,8 @@ use std::io::net::udp::UdpSocket;
 use std::io::net::ip::SocketAddr;
 use std::io::{IoResult, IoError, OtherIoError, TimedOut};
 use std::io::Timer;
-use std::comm::{Disconnected, Empty, Select};
+use std::sync::mpsc::{Sender, Receiver, TryRecvError, channel, Select};
+use std::thread::Thread;
 use std::time::duration::Duration;
 use packet::{Packet, PacketType, TaskCommand};
 use shared::{ConnectionConfig, SequenceManager};
@@ -62,10 +63,10 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Ta
                             Ok(TaskCommand::Disconnect) => {
                                 break;
                             },
-                            Err(Disconnected) => {
+                            Err(TryRecvError::Disconnected) => {
                                 break;
                             },
-                            Err(Empty) => {
+                            Err(TryRecvError::Empty) => {
                                 //Keep going
                             }
                         }
@@ -159,13 +160,13 @@ impl <T> Client <T> {
                 let protocol_id = config.protocol_id;
                 let timeout_period = config.timeout_period;
 
-                spawn(|| {
+                Thread::spawn(|| {
                     reader_process(reader, reader_task_send, reader_task_receive, target_addr, protocol_id, timeout_period);
                 });
 
                 let (writer_send, writer_task_receive) = channel();
 
-                spawn(|| {
+                Thread::spawn(|| {
                     writer_process(writer, writer_task_receive, target_addr);
                 });
 
