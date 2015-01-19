@@ -29,7 +29,7 @@ pub enum PollFailResult {
 }
 
 fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<TaskCommand>, target_addr: SocketAddr, protocol_id: u32, timeout_period: Duration) {
-    let mut buf = [0, ..1023];
+    let mut buf = [0; 1024];
     reader.set_timeout(Some(1000));
 
     let mut expires = now().to_timespec().sec + timeout_period.num_seconds();
@@ -41,7 +41,7 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Ta
                     match Packet::deserialize(buf.slice_to(amt)) {
                         Ok(packet) => {
                             if packet.protocol_id == protocol_id {
-                                match send.send_opt(packet) {
+                                match send.send(packet) {
                                     Ok(()) => {
                                         expires = now().to_timespec().sec + timeout_period.num_seconds();
                                     },
@@ -78,7 +78,7 @@ fn reader_process(mut reader: UdpSocket, send: Sender<Packet>, recv: Receiver<Ta
         if now().to_timespec().sec > expires {
             //FIXME: Need a nicer way of ignoring failure for this
             //FIXME: Bad sequence ID!
-            match send.send_opt(Packet::disconnect(protocol_id, 0)) {
+            match send.send(Packet::disconnect(protocol_id, 0)) {
                 _ => break
             }
         }
@@ -160,13 +160,13 @@ impl <T> Client <T> {
                 let protocol_id = config.protocol_id;
                 let timeout_period = config.timeout_period;
 
-                Thread::spawn(|| {
+                Thread::spawn(move || {
                     reader_process(reader, reader_task_send, reader_task_receive, target_addr, protocol_id, timeout_period);
                 });
 
                 let (writer_send, writer_task_receive) = channel();
 
-                Thread::spawn(|| {
+                Thread::spawn(move || {
                     writer_process(writer, writer_task_receive, target_addr);
                 });
 
@@ -293,7 +293,7 @@ impl <T> Client <T> {
      * Send a packet to the server
      */
     pub fn send(&mut self, packet: &T) {
-        match self.writer_send.send_opt(Packet::message(self.config.protocol_id, self.sequence_manager.next_sequence_id(), (self.config.packet_serializer)(packet))) {
+        match self.writer_send.send(Packet::message(self.config.protocol_id, self.sequence_manager.next_sequence_id(), (self.config.packet_serializer)(packet))) {
             _ => () //FIXME: We shouldn't discard errors here
         }
     }
@@ -303,7 +303,7 @@ impl <T> Client <T> {
 impl<T> Drop for Client<T> {
 
     fn drop(&mut self) {
-        match (self.reader_send.send_opt(TaskCommand::Disconnect),  self.writer_send.send_opt(Packet::disconnect(self.config.protocol_id, self.sequence_manager.next_sequence_id()))) {
+        match (self.reader_send.send(TaskCommand::Disconnect),  self.writer_send.send_opt(Packet::disconnect(self.config.protocol_id, self.sequence_manager.next_sequence_id()))) {
             _ => () //FIXME: This is a bad way of discarding errors
         }
     }

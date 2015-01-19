@@ -53,7 +53,7 @@ pub enum PacketOrCommand <T> {
 }
 
 fn reader_process(mut reader: UdpSocket, reader_sub_out: Sender<(Packet, SocketAddr)>, reader_sub_in: Receiver<TaskCommand>, protocol_id: u32) {
-    let mut buf = [0, ..1023];
+    let mut buf = [0; 1024];
     reader.set_timeout(Some(1000));
     loop {
         match reader.recv_from(&mut buf) {
@@ -130,14 +130,14 @@ impl <T> Server <T> {
 
                 let protocol_id = config.protocol_id;
 
-                Thread::spawn(|| {
+                Thread::spawn(move || {
                     reader_process(reader, reader_sub_out, reader_sub_in, protocol_id);
                 });
 
                 let (writer_out, writer_sub_in) = channel();
                 let (writer_sub_out, _) = channel();
 
-                Thread::spawn(|| {
+                Thread::spawn(move || {
                     writer_process(writer, writer_sub_out, writer_sub_in);
                 });
                 

@@ -101,7 +101,7 @@ impl Packet {
     }
 
     pub fn serialize(&self) -> IoResult<Vec<u8>> {
-        let mut w = MemWriter::new();
+        let mut w = vec![];
         try!(w.write_be_u32(self.protocol_id));
         try!(w.write_be_u16(self.sequence_id));
         try!(w.write_u8(self.packet_type as u8));
@@ -111,6 +111,6 @@ impl Packet {
             },
             None => ()
         }
-        Ok(w.unwrap())
+        Ok(w)
     }
 }
