@@ -7,10 +7,12 @@ use std::time::duration::Duration;
 use std::io::net::udp::UdpSocket;
 use std::io::Timer;
 use tests::test_shared;
+use std::thread::Thread;
+use std::sync::mpsc::{channel};
 
 macro_rules! with_bound_socket {
     (($variable:ident)$code:block) => (
-        spawn(proc() {
+        Thread::spawn(move || {
             match UdpSocket::bind(SocketAddr{ ip: Ipv4Addr(0, 0, 0, 0), port: 0 }) {
                 Ok(mut $variable) => $code,
                 Err(e) => panic!(e)

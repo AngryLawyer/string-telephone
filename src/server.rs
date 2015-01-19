@@ -219,20 +219,22 @@ impl <T> Server <T> {
      * Disconnect, and return, any sockets that have not contacted us for our timeout duration
      */
     pub fn cull(&mut self) -> Vec<SocketAddr> {
-        let mut keep_alive = BTreeMap::new();
+        let mut culled_hashes = vec![];
         let mut culled = vec![];
 
         let now = now().to_timespec().sec;
 
-        for (hash, connection) in self.connections.into_iter() {
-            if connection.timeout >= now {
-                keep_alive.insert(hash, connection);
-            } else {
+        for (hash, connection) in self.connections.iter() {
+            if connection.timeout < now {
                 culled.push(connection.addr);
+                culled_hashes.push(hash.clone()); //FIXME: Shouldn't be cloning here
             }
         };
 
-        self.connections = keep_alive;
+        for hash in culled_hashes.iter() {
+            self.connections.remove(hash);
+        }
+
         culled
     }
 
@@ -265,8 +267,8 @@ impl <T> Server <T> {
      * Send a packet to every connected client
      */
     pub fn send_to_all(&mut self, packet: &T) {
-        for addr in self.connections.values() {
-            self.send_to(packet, &addr.addr);
+        for addr in self.all_connections().iter() {
+            self.send_to(packet, addr);
         }
     }
 

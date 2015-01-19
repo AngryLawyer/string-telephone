@@ -1,9 +1,12 @@
 extern crate string_telephone;
 extern crate collections;
+extern crate core;
 
 use std::io::net::ip::{Ipv4Addr, SocketAddr};
 use std::io;
 use std::time::duration::Duration;
+use std::sync::mpsc::{channel};
+use std::thread::Thread;
 
 use string_telephone::{ConnectionConfig, ClientConnectionConfig, Client, PollFailResult};
 
@@ -16,11 +19,11 @@ fn main () {
 
     match Client::connect(SocketAddr {ip: Ipv4Addr(0, 0, 0, 0), port: 0}, SocketAddr {ip: Ipv4Addr(127, 0, 0, 1), port: 6666}, settings, client_settings) {
         Ok(ref mut connection) => {
-            println!("Connected!")
+            println!("Connected!");
 
             let (send, recv) = channel();
 
-            spawn(proc() {
+            Thread::spawn(move || {
                 loop {
                     let input = io::stdin().read_line()
                                            .ok()

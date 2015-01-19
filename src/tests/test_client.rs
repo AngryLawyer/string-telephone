@@ -7,6 +7,8 @@ use std::io::net::udp::UdpSocket;
 use std::io::Timer;
 use std::time::duration::Duration;
 use tests::test_shared;
+use std::thread::Thread;
+use std::sync::mpsc::{channel};
 
 fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, SocketAddr, ConnectionConfig<Vec<u8>>, ClientConnectionConfig) {
     let my_addr = SocketAddr{ ip: Ipv4Addr(0, 0, 0, 0), port: 0 };
@@ -18,7 +20,7 @@ fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, SocketAddr, Co
 
 macro_rules! with_bound_socket {
     ($socket:ident, ($variable:ident)$code:block) => (
-        spawn(|| {
+        Thread::spawn(|| {
             match UdpSocket::bind($socket) {
                 Ok(mut $variable) => $code,
                 Err(e) => panic!(e)

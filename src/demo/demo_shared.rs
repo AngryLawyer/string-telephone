@@ -1,9 +1,10 @@
-use collections::str::{Slice, Owned};
+use core::borrow::Cow;
+use collections::string::CowString;
 
 pub fn deserializer(message: &Vec<u8>) -> Option<String> {
     match String::from_utf8_lossy(message.as_slice()) {
-        Slice(slice) => Some(slice.to_string()),
-        Owned(item) => Some(item)
+        Cow::Borrowed(slice) => Some(slice.to_string()),
+        Cow::Owned(item) => Some(item)
     }
 }
 
