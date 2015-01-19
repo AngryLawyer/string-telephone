@@ -8,7 +8,7 @@ use std::io::net::udp::UdpSocket;
 use std::io::Timer;
 use tests::test_shared;
 
-macro_rules! with_bound_socket(
+macro_rules! with_bound_socket {
     (($variable:ident)$code:block) => (
         spawn(proc() {
             match UdpSocket::bind(SocketAddr{ ip: Ipv4Addr(0, 0, 0, 0), port: 0 }) {
@@ -17,7 +17,7 @@ macro_rules! with_bound_socket(
             }
         });
     )
-)
+}
 
 fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, ConnectionConfig<Vec<u8>>) {
     let my_addr = SocketAddr{ ip: Ipv4Addr(127, 0, 0, 1), port: port };
@@ -70,7 +70,7 @@ fn bad_client_attempt() {
             });
             rx.recv();
             Timer::new().unwrap().sleep(Duration::seconds(1));
-            assert!(server.poll().is_none())
+            assert!(server.poll().is_none());
             assert!(server.all_connections().len() == 0);
         },
         Err(t) => panic!("Failed to create a server - {}", t)

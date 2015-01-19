@@ -16,16 +16,16 @@ fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, SocketAddr, Co
     (my_addr, target_addr, settings, client_settings)
 }
 
-macro_rules! with_bound_socket(
-    (($socket:ident, ($variable:ident)$code:block) => (
+macro_rules! with_bound_socket {
+    ($socket:ident, ($variable:ident)$code:block) => (
         spawn(|| {
             match UdpSocket::bind($socket) {
                 Ok(mut $variable) => $code,
                 Err(e) => panic!(e)
             }
         });
-    ))
-)
+    )
+}
 
 /**
  * Test when there isn't a backend to connect to
