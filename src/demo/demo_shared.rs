@@ -1,5 +1,4 @@
 use core::borrow::Cow;
-use collections::string::CowString;
 
 pub fn deserializer(message: &Vec<u8>) -> Option<String> {
     match String::from_utf8_lossy(message.as_slice()) {

@@ -27,7 +27,8 @@ fn main () {
                 };
                 let culled = server.cull();
                 if culled.len() > 0 {
-                    println!("{}", culled);
+                    let mapped: Vec<String> = culled.iter().map(|addr| { format!("{}", addr) }).collect();
+                    println!("{}", mapped.connect(","))
                 }
             }
         },
