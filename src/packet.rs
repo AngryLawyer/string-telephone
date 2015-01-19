@@ -3,7 +3,7 @@ use std::io::{BufReader, MemWriter};
 use std::num::FromPrimitive;
 
 ///Headers for various different built-in message types
-#[deriving(FromPrimitive, Clone, Show, PartialEq)]
+#[derive(FromPrimitive, Clone, Show, PartialEq)]
 pub enum PacketType {
     Connect = 0,
     Accept,
@@ -13,7 +13,7 @@ pub enum PacketType {
 }
 
 ///The underlying shape for transferring data.
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Packet {
     pub protocol_id: u32,
     ///The current id of the packet

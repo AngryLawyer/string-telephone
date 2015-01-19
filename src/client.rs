@@ -215,21 +215,27 @@ impl <T> Client <T> {
             unsafe { reader.add(); timeout.add(); }
             let ret = sel.wait();
             if ret == reader.id() {
-                let packet = self.reader_receive.recv();
-                match packet.packet_type {
-                    PacketType::Accept => {
-                        self.connection_state = ConnectionState::Connected;
+                match self.reader_receive.recv() {
+                    Ok(packet) => {
+                        match packet.packet_type {
+                            PacketType::Accept => {
+                                self.connection_state = ConnectionState::Connected;
+                            }
+                            PacketType::Reject => {
+                                self.connection_state = ConnectionState::Disconnected;
+                            }
+                            PacketType::Disconnect => {
+                                self.connection_state = ConnectionState::Disconnected;
+                            }
+                            _ => (),
+                        }
+                    },
+                    Err(_) => {
+                        panic!("Reader disconnected while connection dancing."); //FIXME: There's gotta be a better way to do this
                     }
-                    PacketType::Reject => {
-                        self.connection_state = ConnectionState::Disconnected;
-                    }
-                    PacketType::Disconnect => {
-                        self.connection_state = ConnectionState::Disconnected;
-                    }
-                    _ => (),
                 }
             } else if ret == timeout.id() {
-                let () = timeout.recv();
+                let _ = timeout.recv();
                 attempts += 1;
             } else {
                 unreachable!();
@@ -303,7 +309,7 @@ impl <T> Client <T> {
 impl<T> Drop for Client<T> {
 
     fn drop(&mut self) {
-        match (self.reader_send.send(TaskCommand::Disconnect),  self.writer_send.send_opt(Packet::disconnect(self.config.protocol_id, self.sequence_manager.next_sequence_id()))) {
+        match (self.reader_send.send(TaskCommand::Disconnect),  self.writer_send.send(Packet::disconnect(self.config.protocol_id, self.sequence_manager.next_sequence_id()))) {
             _ => () //FIXME: This is a bad way of discarding errors
         }
     }
