@@ -3,7 +3,7 @@ use std::io::{BufReader, MemWriter};
 use std::num::FromPrimitive;
 
 ///Headers for various different built-in message types
-#[derive(FromPrimitive, Clone, Show, PartialEq)]
+#[derive(FromPrimitive, Clone, Show, PartialEq, Copy)]
 pub enum PacketType {
     Connect = 0,
     Accept,

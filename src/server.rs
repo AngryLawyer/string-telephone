@@ -224,9 +224,9 @@ impl <T> Server <T> {
 
         let now = now().to_timespec().sec;
 
-        for (hash, connection) in self.connections.iter() {
+        for (hash, connection) in self.connections.into_iter() {
             if connection.timeout >= now {
-                keep_alive.insert(hash.clone(), connection.clone());
+                keep_alive.insert(hash, connection);
             } else {
                 culled.push(connection.addr);
             }
@@ -265,7 +265,7 @@ impl <T> Server <T> {
      * Send a packet to every connected client
      */
     pub fn send_to_all(&mut self, packet: &T) {
-        for addr in self.connections.clone().values() { //FIXME: Urgh - we shouldn't be cloning our connections
+        for addr in self.connections.values() {
             self.send_to(packet, &addr.addr);
         }
     }
