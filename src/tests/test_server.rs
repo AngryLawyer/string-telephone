@@ -67,7 +67,7 @@ fn bad_client_attempt() {
     match Server::new(my_addr, settings) {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
-                socket.send_to(Packet::connect(122, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(122, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 tx.send(());
             });
             rx.recv();
@@ -91,7 +91,7 @@ fn single_client() {
     match Server::new(my_addr, settings) {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 tx.send(());
             });
             rx.recv();
@@ -120,11 +120,11 @@ fn multiple_clients() {
     match Server::new(my_addr, settings) {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 tx.send(());
             });
             with_bound_socket!((socket) {
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 tx2.send(());
             });
             rx.recv();
@@ -160,11 +160,11 @@ fn cull() {
     match Server::new(my_addr, settings) {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 tx.send(());
             });
             with_bound_socket!((socket) {
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 tx2.send(());
             });
             rx.recv();
@@ -202,11 +202,11 @@ fn send_to_one() {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
 
-                tx.send(Packet::deserialize(message[]).ok().expect("Couldn't deserialize a message"));
+                tx.send(Packet::deserialize(message.as_slice()).ok().expect("Couldn't deserialize a message"));
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             let source = match server.poll() {
@@ -254,19 +254,19 @@ fn send_to_many() {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
 
-                tx.send(Packet::deserialize(message[]).ok().expect("Couldn't deserialize a message"));
+                tx.send(Packet::deserialize(message.as_slice()).ok().expect("Couldn't deserialize a message"));
             });
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
 
-                tx2.send(Packet::deserialize(message[]).ok().expect("Couldn't deserialize a message"));
+                tx2.send(Packet::deserialize(message.as_slice()).ok().expect("Couldn't deserialize a message"));
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             let source = match server.poll() {
@@ -303,19 +303,19 @@ fn send_to_all() {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
 
-                tx.send(Packet::deserialize(message[]).ok().expect("Couldn't deserialize a message"));
+                tx.send(Packet::deserialize(message.as_slice()).ok().expect("Couldn't deserialize a message"));
             });
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
                 let (message, _) = test_shared::get_message(&mut socket); //Should be the Message message
 
-                tx2.send(Packet::deserialize(message[]).ok().expect("Couldn't deserialize a message"));
+                tx2.send(Packet::deserialize(message.as_slice()).ok().expect("Couldn't deserialize a message"));
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
@@ -350,9 +350,9 @@ fn receive() {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
-                socket.send_to(Packet::message(121, 1, vec![1,2,3]).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::message(121, 1, vec![1,2,3]).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
@@ -384,9 +384,9 @@ fn client_disconnect() {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
-                socket.send_to(Packet::disconnect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::disconnect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
@@ -419,9 +419,9 @@ fn client_tries_multiple_connect() {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
@@ -453,11 +453,11 @@ fn out_of_sequence_packets() {
         Ok(ref mut server) => {
             with_bound_socket!((socket) {
                 socket.set_timeout(Some(5000));
-                socket.send_to(Packet::connect(121, 0).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::connect(121, 0).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
                 test_shared::get_message(&mut socket); //Should be the Accept message
-                socket.send_to(Packet::message(121, 1, vec![1]).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
-                socket.send_to(Packet::message(121, 0, vec![2]).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
-                socket.send_to(Packet::message(121, 2, vec![3]).serialize().unwrap()[], my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::message(121, 1, vec![1]).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::message(121, 0, vec![2]).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
+                socket.send_to(Packet::message(121, 2, vec![3]).serialize().unwrap().as_slice(), my_addr).ok().expect("Couldn't send a message");
             });
             Timer::new().unwrap().sleep(Duration::seconds(1));
             match server.poll() {
