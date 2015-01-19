@@ -124,7 +124,7 @@ pub struct Client <T> {
  */
 pub struct ClientConnectionConfig {
     ///How many times should we ask for a connection before giving up?
-    pub max_connect_retries: uint,
+    pub max_connect_retries: u32,
     ///How long should each connection request await an answer?
     pub connect_attempt_timeout: Duration
 }
@@ -134,7 +134,7 @@ impl ClientConnectionConfig {
     /**
      * Create a new ClientConnectionConfig object
      */
-    pub fn new(max_connect_retries: uint, connect_attempt_timeout: Duration) -> ClientConnectionConfig {
+    pub fn new(max_connect_retries: u32, connect_attempt_timeout: Duration) -> ClientConnectionConfig {
         ClientConnectionConfig {
             max_connect_retries: max_connect_retries,
             connect_attempt_timeout: connect_attempt_timeout
@@ -197,10 +197,10 @@ impl <T> Client <T> {
     /**
      * A blocking connection request
      */
-    fn connection_dance(&mut self, max_attempts: uint, timeout: Duration) -> bool {
+    fn connection_dance(&mut self, max_attempts: u32, timeout: Duration) -> bool {
         self.connection_state = ConnectionState::Connecting;
         let mut timer = Timer::new().unwrap();
-        let mut attempts = 0u;
+        let mut attempts = 0u32;
 
         while attempts < max_attempts && match self.connection_state { ConnectionState::Connecting => true, _ => false } {
             self.writer_send.send(Packet::connect(self.config.protocol_id, self.sequence_manager.next_sequence_id()));

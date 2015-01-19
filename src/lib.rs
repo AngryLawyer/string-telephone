@@ -4,8 +4,6 @@
 //! Simple abstractions for networking for video games
 //!
 #![feature(unsafe_destructor)]
-#![feature(globs)]
-#![feature(macro_rules)]
 #![crate_name = "string_telephone"]
 #![crate_type="lib"]
 
