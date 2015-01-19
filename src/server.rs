@@ -129,14 +129,14 @@ impl <T> Server <T> {
 
                 let protocol_id = config.protocol_id;
 
-                spawn(proc() {
+                spawn(|| {
                     reader_process(reader, reader_sub_out, reader_sub_in, protocol_id);
                 });
 
                 let (writer_out, writer_sub_in) = channel();
                 let (writer_sub_out, _) = channel();
 
-                spawn(proc() {
+                spawn(|| {
                     writer_process(writer, writer_sub_out, writer_sub_in);
                 });
                 

@@ -17,14 +17,14 @@ fn generate_settings(port: u16, protocol_id: u32) -> (SocketAddr, SocketAddr, Co
 }
 
 macro_rules! with_bound_socket(
-    ($socket:ident, ($variable:ident)$code:block) => (
-        spawn(proc() {
+    (($socket:ident, ($variable:ident)$code:block) => (
+        spawn(|| {
             match UdpSocket::bind($socket) {
                 Ok(mut $variable) => $code,
                 Err(e) => panic!(e)
             }
         });
-    )
+    ))
 )
 
 /**

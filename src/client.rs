@@ -159,13 +159,13 @@ impl <T> Client <T> {
                 let protocol_id = config.protocol_id;
                 let timeout_period = config.timeout_period;
 
-                spawn(proc() {
+                spawn(|| {
                     reader_process(reader, reader_task_send, reader_task_receive, target_addr, protocol_id, timeout_period);
                 });
 
                 let (writer_send, writer_task_receive) = channel();
 
-                spawn(proc() {
+                spawn(|| {
                     writer_process(writer, writer_task_receive, target_addr);
                 });
 
