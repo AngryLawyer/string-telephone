@@ -191,7 +191,7 @@ fn single_item_polling() {
                 Ok(packet) => {
                     assert!(packet == vec![1]);
                 },
-                Err(e) => panic!("Couldn't match a polled message! - {}", e)
+                Err(e) => panic!("Couldn't match a polled message!")
             };
         },
         Err(e) => panic!(e)
@@ -225,7 +225,7 @@ fn multiple_item_polling() {
                 match client.poll() { 
                     Ok(packet) => packets.push(packet),
                     Err(PollFailResult::Empty) => break,
-                    Err(e) => panic!("Unexpected failure - {}", e)
+                    Err(e) => panic!("Unexpected failure")
                 };
             }
         },
@@ -265,7 +265,7 @@ fn ignore_bad_queue_items_polling() {
                 match client.poll() { 
                     Ok(packet) => packets.push(packet),
                     Err(PollFailResult::Empty) => break,
-                    Err(e) => panic!("Unexpected failure - {}", e)
+                    Err(e) => panic!("Unexpected failure")
                 };
             }
         },

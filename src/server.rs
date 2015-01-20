@@ -21,7 +21,7 @@ fn hash_sender(address: &SocketAddr) -> String {
     }
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 struct ClientInstance {
     addr: SocketAddr,
     timeout: i64,

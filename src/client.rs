@@ -22,7 +22,6 @@ pub enum ConnectionState {
 /**
  * A Poll attempt failed for some reason
  */
-#[deriving(Show)]
 pub enum PollFailResult {
     Empty,
     Disconnected

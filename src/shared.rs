@@ -32,7 +32,7 @@ impl <T> ConnectionConfig <T> {
 /**
  * A helper struct to maintain packet ordering and acks
  */
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct SequenceManager {
     pub last_sent_sequence_id: u16,
     pub last_received_sequence_id: u16
