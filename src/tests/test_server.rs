@@ -216,7 +216,7 @@ fn send_to_one() {
             };
             let message_out = vec![1,2];
             assert!(server.send_to(&message_out, &source) == true);
-            let message = rx.recv();
+            let message = rx.recv().unwrap();
             assert!(message.packet_type == PacketType::Message);
             assert!(message.packet_content.unwrap() == message_out);
         },
@@ -281,8 +281,8 @@ fn send_to_many() {
             };
             let message_out = vec![1,2];
             server.send_to_many(&message_out, &vec![source, source2]);
-            let message1 = rx.recv();
-            let message2 = rx.recv();
+            let message1 = rx.recv().unwrap();
+            let message2 = rx.recv().unwrap();
             assert!(message1.packet_content.unwrap() == message2.packet_content.unwrap());
         },
         Err(t) => panic!("Failed to create a server - {}", t)
@@ -330,8 +330,8 @@ fn send_to_all() {
             };
             let message_out = vec![1,2];
             server.send_to_all(&message_out);
-            let message1 = rx.recv();
-            let message2 = rx.recv();
+            let message1 = rx.recv().unwrap();
+            let message2 = rx.recv().unwrap();
             assert!(message1.packet_content.unwrap() == message2.packet_content.unwrap());
         },
         Err(t) => panic!("Failed to create a server - {}", t)

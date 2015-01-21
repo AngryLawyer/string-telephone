@@ -352,7 +352,7 @@ fn send_correct_handshake() {
         socket.set_timeout(Some(10000));
         let (msg, src) = test_shared::get_message(&mut socket);
         //Check what's been sent
-        let packet = Packet::deserialize(msg[]);
+        let packet = Packet::deserialize(msg.as_slice());
         socket.send_to(Packet::accept(121, 0).serialize().unwrap().as_slice(), src).ok().expect("Couldn't send a message");
         tx.send(packet);
     });
@@ -384,7 +384,7 @@ fn send_data() {
         socket.send_to(Packet::accept(121, 0).serialize().unwrap().as_slice(), src).ok().expect("Couldn't send a message");
         //Check what's been sent
         let (msg, _) = test_shared::get_message(&mut socket);
-        let packet = Packet::deserialize(msg[]);
+        let packet = Packet::deserialize(msg.as_slice());
         tx.send(packet);
     });
 
@@ -395,7 +395,7 @@ fn send_data() {
         Err(_) => ()
     };
 
-    let packet = rx.recv().unwrap();
+    let packet = rx.recv().unwrap().unwrap();
     assert!(packet.protocol_id == 121);
     assert!(packet.packet_type == PacketType::Message);
     assert!(packet.packet_content.unwrap() == vec![1, 2, 3])
@@ -417,7 +417,7 @@ fn client_disconnect() {
         socket.send_to(Packet::accept(121, 0).serialize().unwrap().as_slice(), src).ok().expect("Couldn't send a message");
         //Check what's been sent
         let (msg, _) = test_shared::get_message(&mut socket);
-        let packet = Packet::deserialize(msg[]);
+        let packet = Packet::deserialize(msg.as_slice());
         tx.send(packet);
     });
 
@@ -426,7 +426,7 @@ fn client_disconnect() {
         Err(_) => ()
     };
 
-    let packet = rx.recv().unwrap();
+    let packet = rx.recv().unwrap().unwrap();
     assert!(packet.protocol_id == 121);
     assert!(packet.packet_type == PacketType::Disconnect);
     assert!(packet.packet_content.is_none())
@@ -459,7 +459,7 @@ fn out_of_sequence() {
                 match client.poll() { 
                     Ok(packet) => packets.push(packet),
                     Err(PollFailResult::Empty) => break,
-                    Err(e) => panic!("Unexpected failure - {}", e)
+                    Err(e) => panic!("Unexpected failure")
                 };
             }
         },
