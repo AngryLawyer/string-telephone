@@ -8,6 +8,6 @@ The API won't be settled for a while, so use at your own risk!
 
 Available on crates.io
 
-    string_telephone = "0.0.1"
+    string_telephone = "0.0.2"
 
 [Documentation](http://angrylawyer.github.io/string-telephone/string_telephone/)
