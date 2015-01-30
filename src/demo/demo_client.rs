@@ -2,8 +2,8 @@ extern crate string_telephone;
 extern crate collections;
 extern crate core;
 
-use std::io::net::ip::{Ipv4Addr, SocketAddr};
-use std::io;
+use std::old_io::net::ip::{Ipv4Addr, SocketAddr};
+use std::old_io;
 use std::time::duration::Duration;
 use std::sync::mpsc::{channel};
 use std::thread::Thread;
@@ -25,7 +25,7 @@ fn main () {
 
             Thread::spawn(move || {
                 loop {
-                    let input = io::stdin().read_line()
+                    let input = old_io::stdin().read_line()
                                            .ok()
                                            .expect("Failed to read line");
 

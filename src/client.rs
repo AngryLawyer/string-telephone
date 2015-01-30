@@ -1,7 +1,7 @@
-use std::io::net::udp::UdpSocket;
-use std::io::net::ip::SocketAddr;
-use std::io::{IoResult, IoError, OtherIoError, TimedOut};
-use std::io::Timer;
+use std::old_io::net::udp::UdpSocket;
+use std::old_io::net::ip::SocketAddr;
+use std::old_io::{IoResult, IoError, OtherIoError, TimedOut};
+use std::old_io::Timer;
 use std::sync::mpsc::{Sender, Receiver, TryRecvError, channel, Select};
 use std::thread::Thread;
 use std::time::duration::Duration;

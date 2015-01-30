@@ -1,5 +1,5 @@
-use std::io::net::ip::SocketAddr;
-use std::io::net::udp::UdpSocket;
+use std::old_io::net::ip::SocketAddr;
+use std::old_io::net::udp::UdpSocket;
 
 pub fn get_message(socket: &mut UdpSocket) -> (Vec<u8>, SocketAddr) {
     let mut buf = [0; 256];

@@ -2,9 +2,9 @@ use shared::ConnectionConfig;
 use client::{ClientConnectionConfig, Client, PollFailResult};
 use packet::{Packet, PacketType};
 
-use std::io::net::ip::{Ipv4Addr, SocketAddr};
-use std::io::net::udp::UdpSocket;
-use std::io::Timer;
+use std::old_io::net::ip::{Ipv4Addr, SocketAddr};
+use std::old_io::net::udp::UdpSocket;
+use std::old_io::Timer;
 use std::time::duration::Duration;
 use tests::test_shared;
 use std::thread::Thread;

@@ -1,7 +1,7 @@
 extern crate collections;
 extern crate string_telephone;
 extern crate core;
-use std::io::net::ip::{Ipv4Addr, SocketAddr};
+use std::old_io::net::ip::{Ipv4Addr, SocketAddr};
 use std::time::duration::Duration;
 
 use string_telephone::{ConnectionConfig, Server, PacketOrCommand};
